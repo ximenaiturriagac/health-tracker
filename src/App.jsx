@@ -64,7 +64,7 @@ const MEALS = [
 const HABITS = [
   { key:'agua',    icon:'💧', label:'Agua',     unit:'vasos', goal:8,  step:1 },
   { key:'lectura', icon:'📖', label:'Lectura',  unit:'min',   goal:20, step:5 },
-  { key:'estudio', icon:'🎓', label:'Estudio',  unit:'min',   goal:30, step:5 },
+
 ];
 
 const SLEEP_CYCLES = [
@@ -225,7 +225,6 @@ export default function App() {
   // Habit states
   const [agua, setAgua] = useState(0);
   const [lectura, setLectura] = useState(0);
-  const [estudio, setEstudio] = useState(0);
 
   // Sleep states
   const [bedtime, setBedtime] = useState('23:00');
@@ -245,7 +244,6 @@ export default function App() {
       if (d.mealStatus) setMealStatus(d.mealStatus);
       if (d.agua) setAgua(d.agua);
       if (d.lectura) setLectura(d.lectura);
-      if (d.estudio) setEstudio(d.estudio);
       if (d.bedtime) setBedtime(d.bedtime);
       if (d.actualWake) setActualWake(d.actualWake);
       if (d.sleepQuality) setSleepQuality(d.sleepQuality);
@@ -259,7 +257,7 @@ export default function App() {
   const handleSave = async () => {
     const data = {
       mealStatus, mealNotes, desTime, showCam,
-      agua, lectura, estudio,
+      agua, lectura,
       bedtime, actualWake, sleepQuality, weight,
       eventsDone,
       date: todayKey(),
@@ -291,7 +289,7 @@ export default function App() {
 
   const mealDone = (key) => mealStatus[key] !== null;
   const allMealsDone = MEALS.filter(m => m.key !== 'cam' || showCam).every(m => mealDone(m.key));
-  const habitsDone = agua > 0 || lectura > 0 || estudio > 0;
+  const habitsDone = agua > 0 || lectura > 0;
 
   return (
     <div style={{
@@ -547,20 +545,6 @@ export default function App() {
                 </div>
                 <div style={{ height:6, background:'#F5F3EE', borderRadius:3 }}>
                   <div style={{ height:'100%', borderRadius:3, background:'#E9C46A', width:`${Math.min(100,(lectura/20)*100)}%`, transition:'width 0.3s' }} />
-                </div>
-              </div>
-
-              {/* Estudio */}
-              <div>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:600, color:'#1A1916' }}>🎓 Estudio</div>
-                    <div style={{ fontSize:11, color:'#9B9890' }}>Meta: 30 min</div>
-                  </div>
-                  <Stepper value={estudio} onChange={setEstudio} min={0} max={180} step={5} unit="min" />
-                </div>
-                <div style={{ height:6, background:'#F5F3EE', borderRadius:3 }}>
-                  <div style={{ height:'100%', borderRadius:3, background:'#4A6FA5', width:`${Math.min(100,(estudio/30)*100)}%`, transition:'width 0.3s' }} />
                 </div>
               </div>
 
