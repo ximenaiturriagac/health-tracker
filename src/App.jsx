@@ -154,10 +154,27 @@ export default function App() {
   useEffect(() => {
     const t = localStorage.getItem('ht_token');
     if (t) setToken(t);
+    if (!document.getElementById('google-gsi')) {
+      const script = document.createElement('script');
+      script.id = 'google-gsi';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
   }, []);
 
   const handleAuth = useCallback(() => {
-    if (!window.google) { alert('Cargando Google API, intenta en un momento'); return; }
+    if (!window.google?.accounts?.oauth2) {
+      setTimeout(() => {
+        if (!window.google?.accounts?.oauth2) {
+          alert('La API de Google no cargó. Recarga la página e intenta de nuevo.');
+          return;
+        }
+        handleAuth();
+      }, 1500);
+      return;
+    }
     setAuthLoading(true);
     window.google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
@@ -220,7 +237,6 @@ export default function App() {
   return (
     <div style={{ minHeight:'100vh', background:'#F5F3EE', fontFamily:'"DM Sans",sans-serif', maxWidth:480, margin:'0 auto', paddingBottom:40 }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <script src="https://accounts.google.com/gsi/client" async defer></script>
 
       {/* HEADER */}
       <div style={{ background:'linear-gradient(160deg,#1B4332,#2D6A4F,#40916C)', padding:'28px 20px 24px', color:'#fff' }}>
