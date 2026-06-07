@@ -307,7 +307,7 @@ const FOODDB = [
   { kw:["huevo"], k:70 }, { kw:["yogur","yogurt"], k:120 }, { kw:["cottage","queso cottage","requesón"], k:90 }, { kw:["queso panela","panela"], k:90 }, { kw:["queso"], k:110 },
   { kw:["papaya"], k:60 }, { kw:["sandía","sandia"], k:50 }, { kw:["melón","melon"], k:60 }, { kw:["piña","pina"], k:80 }, { kw:["uvas","uva"], k:90 }, { kw:["durazno"], k:60 }, { kw:["arándanos","arandanos"], k:60 }, { kw:["mandarina"], k:45 }, { kw:["kiwi"], k:45 },
   { kw:["proteína","proteina","scoop","fitmingo","isopure"], k:140 },
-  { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 },
+  { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 }, { kw:["calabacita","calabaza"], k:25 }, { kw:["brócoli","brocoli"], k:30 }, { kw:["pepino"], k:15 }, { kw:["lechuga"], k:10 }, { kw:["jícama","jicama"], k:35 }, { kw:["nopal","nopales"], k:15 }, { kw:["champiñones","champiñon","hongos"], k:20 }, { kw:["zanahoria"], k:35 }, { kw:["papa cambray","papa","papas cambray"], k:110 },
   { kw:["leche deslactosada","500 ml leche","leche"], k:200 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
   { kw:["pasta","espagueti"], k:300 }, { kw:["ensalada"], k:150 }, { kw:["sopa","caldo"], k:180 },
   { kw:["pechuga","pollo"], k:200 }, { kw:["carne","bistec","res","arrachera"], k:250 },
