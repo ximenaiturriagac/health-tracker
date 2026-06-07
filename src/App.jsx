@@ -278,7 +278,9 @@ async function upsertByDate(sheet, values, token) {
   const rowValues = [values.map(v => String(v))];
   if (rowIndex > 0) {
     // Actualizar la fila existente
-    const lastCol = String.fromCharCode(64 + values.length); // 8 cols → "H"
+    const lastCol = values.length <= 26
+      ? String.fromCharCode(64 + values.length)
+      : "A" + String.fromCharCode(64 + values.length - 26);
     const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet}!A${rowIndex}:${lastCol}${rowIndex}?valueInputOption=RAW`;
     const r = await fetch(updateUrl, {
       method:"PUT",
@@ -706,12 +708,14 @@ export default function App() {
     if (!token) { handleAuth(); return; }
     setClosingDay(true);
     const consumed = Object.values(log).reduce((s,m) => s+(m?.kcal||0), 0);
-    const meals = MEAL_META.map(m => log[m.key] ? `${m.label}: ${log[m.key].name} (${log[m.key].kcal} kcal)` : `${m.label}: —`).join(" | ");
     try {
       await upsertByDate("Historial_Alimentacion", [
         activeDate, consumed, consumed-TARGET,
-        log.des?.name||"—", log.cam?.name||"—", log.com?.name||"—",
-        log.cpm?.name||"—", log.cen?.name||"—",
+        log.des?.name||"—", log.des?.kcal||0,
+        log.cam?.name||"—", log.cam?.kcal||0,
+        log.com?.name||"—", log.com?.kcal||0,
+        log.cpm?.name||"—", log.cpm?.kcal||0,
+        log.cen?.name||"—", log.cen?.kcal||0,
       ], token);
       setDayClosed(true);
     } catch(e) {
@@ -1005,7 +1009,7 @@ export default function App() {
           <>
             {/* Sub-tabs */}
             <div style={{ display:"flex", background:"#fff", borderRadius:14, border:`1px solid ${NEUTRAL2}`, overflow:"hidden" }}>
-              {[["hoy","📋 Hoy"],["recetas","📖 Recetas"],["compras","🛒 Compras"],["historial","📅 Historial"]].map(([id,l]) => (
+              {[["hoy","📋 Hoy"],["recetas","📖 Recetas"],["compras","🛒 Compras"],["historial","📅 Historial"],["reporte","📊 Reporte"]].map(([id,l]) => (
                 <button key={id} onClick={() => setFoodTab(id)} style={{ flex:1, padding:"11px 2px", border:"none", fontFamily:"inherit", background:foodTab===id?VINO_LIGHT:"transparent", color:foodTab===id?VINO:MUTED, fontWeight:foodTab===id?700:400, fontSize:11.5, cursor:"pointer", borderBottom:foodTab===id?`2px solid ${VINO}`:"2px solid transparent" }}>{l}</button>
               ))}
             </div>
@@ -1243,6 +1247,111 @@ export default function App() {
                 );
               })()}
             </>}
+
+            {/* REPORTE */}
+            {foodTab === "reporte" && (() => {
+              const dias = Object.entries(history).sort((a,b) => b[0].localeCompare(a[0]));
+              if (dias.length === 0) return (
+                <div style={{ textAlign:"center", padding:40, color:MUTED, fontSize:14 }}>
+                  Aún no hay días cerrados. Registra tus comidas y toca "Cerrar día" para generar el reporte.
+                </div>
+              );
+
+              // Kcal promedio por comida (usando log guardado en localStorage)
+              const mealTotals = { des:[], cam:[], com:[], cpm:[], cen:[] };
+              const mealNames  = { des:{}, cam:{}, com:{}, cpm:{}, cen:{} };
+              dias.forEach(([d]) => {
+                const dayLog = LS.get(`ht_day:${d}`);
+                if (!dayLog) return;
+                MEAL_META.forEach(m => {
+                  const entry = dayLog[m.key];
+                  if (entry && entry.status !== "skip" && entry.kcal > 0) {
+                    mealTotals[m.key].push(entry.kcal);
+                    const n = entry.name || "Otra cosa";
+                    const short = n.length > 35 ? n.slice(0,35)+"…" : n;
+                    mealNames[m.key][short] = (mealNames[m.key][short] || 0) + 1;
+                  }
+                });
+              });
+
+              const avg = k => mealTotals[k].length
+                ? Math.round(mealTotals[k].reduce((s,v)=>s+v,0) / mealTotals[k].length)
+                : null;
+
+              const top3 = k => Object.entries(mealNames[k])
+                .sort((a,b) => b[1]-a[1]).slice(0,3);
+
+              const totalDays = dias.length;
+              const totalAvg  = Math.round(dias.reduce((s,[,i])=>s+i.consumed,0)/totalDays);
+              const onTarget  = dias.filter(([,i])=>Math.abs(i.consumed-TARGET)<=80).length;
+              const overTarget = dias.filter(([,i])=>i.consumed>TARGET+80).length;
+              const underTarget = dias.filter(([,i])=>i.consumed<TARGET-80).length;
+
+              return <>
+                {/* Resumen global */}
+                <div style={{ ...card, padding:14, marginBottom:10, background:VINO_LIGHT, border:`1px solid ${VINO2}44` }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:VINO, marginBottom:8 }}>📊 Resumen general · {totalDays} días</div>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    {[
+                      ["Promedio diario", `${totalAvg} kcal`],
+                      ["En meta (±80)", `${onTarget} días`],
+                      ["Sobre la meta", `${overTarget} días`],
+                      ["Bajo la meta",  `${underTarget} días`],
+                    ].map(([label, val]) => (
+                      <div key={label} style={{ background:"#fff", borderRadius:10, padding:"8px 12px", flex:"1 1 40%", minWidth:100 }}>
+                        <div style={{ fontSize:10, color:MUTED, fontWeight:600 }}>{label}</div>
+                        <div style={{ fontSize:16, fontWeight:800, color:VINO }}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Promedio kcal por comida */}
+                <div style={{ ...card, padding:14, marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:10 }}>⚡ Promedio de calorías por comida</div>
+                  {MEAL_META.map(m => {
+                    const a = avg(m.key);
+                    const pct = a ? Math.round((a/totalAvg)*100) : 0;
+                    return (
+                      <div key={m.key} style={{ marginBottom:10 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                          <span style={{ fontSize:12, color:TEXT }}>{m.icon} {m.label}</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:a?VINO:MUTED }}>{a ? `${a} kcal · ${pct}%` : "Sin datos"}</span>
+                        </div>
+                        <div style={{ height:6, background:NEUTRAL, borderRadius:3 }}>
+                          <div style={{ height:"100%", borderRadius:3, background:VINO, width:`${pct}%`, transition:"width .3s" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ fontSize:10, color:MUTED, marginTop:4 }}>% calculado sobre el promedio total del día</div>
+                </div>
+
+                {/* Top platillos por comida */}
+                <div style={{ ...card, padding:14, marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:10 }}>🏆 Lo que más comes por comida</div>
+                  {MEAL_META.map(m => {
+                    const tops = top3(m.key);
+                    if (tops.length === 0) return null;
+                    return (
+                      <div key={m.key} style={{ marginBottom:12 }}>
+                        <div style={{ fontSize:12, fontWeight:700, color:VINO, marginBottom:5 }}>{m.icon} {m.label}</div>
+                        {tops.map(([name, count], i) => (
+                          <div key={name} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderTop: i===0?"none":`1px solid ${NEUTRAL}` }}>
+                            <span style={{ fontSize:12, color:TEXT, flex:1, lineHeight:1.3 }}>{i===0?"🥇":i===1?"🥈":"🥉"} {name}</span>
+                            <span style={{ fontSize:11, color:MUTED, marginLeft:8, flexShrink:0 }}>{count}x</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize:11, color:MUTED, lineHeight:1.5, padding:"0 4px" }}>
+                  El reporte usa los días que has cerrado con "Cerrar día". Más días = análisis más preciso.
+                </div>
+              </>;
+            })()}
           </>
         )}
 
