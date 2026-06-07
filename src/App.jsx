@@ -797,7 +797,7 @@ export default function App() {
               </div>
               {wakeOptions && (
                 <div>
-                  <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>Toca tu hora óptima → Alexa pondrá la alarma</div>
+                  <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>Toca tu hora óptima de despertar</div>
                   {wakeOptions.map((opt,i) => (
                     <div key={i} onClick={() => setSelectedWake(opt.label)} style={{
                       display:"flex", justifyContent:"space-between", alignItems:"center",
@@ -813,10 +813,15 @@ export default function App() {
                       <span style={{ fontSize:10, fontWeight:700, padding:"3px 9px", borderRadius:100, background:selectedWake===opt.label?"rgba(255,255,255,0.25)":NEUTRAL2, color:selectedWake===opt.label?"#fff":MUTED }}>{opt.score}</span>
                     </div>
                   ))}
-                  <div style={{ fontSize:11, color:MUTED, marginTop:4 }}>Al guardar se escribe en Sheets → IFTTT activa Alexa automáticamente</div>
+                  {(selectedWake || wakeOptions?.[0]?.label) && (
+                    <div style={{ background:VINO, color:"#fff", borderRadius:12, padding:"12px 14px", marginTop:8 }}>
+                      <div style={{ fontSize:11, opacity:0.85, fontWeight:600 }}>🔔 Dile a Alexa antes de dormir:</div>
+                      <div style={{ fontSize:16, fontWeight:800, marginTop:4 }}>"Alexa, pon una alarma a las {selectedWake || wakeOptions[0].label}"</div>
+                    </div>
+                  )}
                 </div>
               )}
-              <SaveBtn onClick={saveSleepPM} saving={saving} saved={savedSection==="sleep_pm"} label="😴 Guardar y activar alarma" />
+              <SaveBtn onClick={saveSleepPM} saving={saving} saved={savedSection==="sleep_pm"} label="😴 Guardar registro de sueño" />
             </div>
           </div>
         )}
