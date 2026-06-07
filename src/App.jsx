@@ -316,6 +316,18 @@ const FOODDB = [
   { kw:["chocolate"], k:230 }, { kw:["papas fritas","papas"], k:300 },
   { kw:["helado","nieve"], k:200 }, { kw:["pastel","pay"], k:350 },
   { kw:["elote"], k:100 }, { kw:["esquite"], k:250 },
+  { kw:["jamón","jamon"], k:50 }, { kw:["crema"], k:110 }, { kw:["mantequilla"], k:70 },
+  { kw:["mermelada"], k:50 }, { kw:["miel"], k:60 }, { kw:["tocino"], k:90 },
+  { kw:["salchicha"], k:80 }, { kw:["mayonesa"], k:90 }, { kw:["aderezo"], k:80 },
+  { kw:["nutella","crema de avellana"], k:100 }, { kw:["azúcar","azucar"], k:50 },
+  { kw:["leche condensada","lechera"], k:130 }, { kw:["nata"], k:80 },
+  { kw:["tlacoyo"], k:230 }, { kw:["sope"], k:200 }, { kw:["gordita"], k:280 },
+  { kw:["tamal"], k:250 }, { kw:["menudo"], k:280 },
+  { kw:["bolillo","telera"], k:180 }, { kw:["pan tostado","rebanada de pan","pan"], k:80 },
+  { kw:["agua de horchata","horchata"], k:150 }, { kw:["agua de jamaica","jamaica"], k:90 },
+  { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
+  { kw:["papas fritas de bolsa","sabritas","frituras"], k:280 },
+  { kw:["flan","gelatina"], k:200 },
 ];
 
 function wordMatch(text, kw) {
