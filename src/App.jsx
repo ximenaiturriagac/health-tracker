@@ -204,12 +204,29 @@ function calcOptimalWake(bedtime) {
 }
 
 function getCurrentSection() {
+  // Si la URL trae ?seccion=... úsala (para los Siri Shortcuts)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("seccion");
+    const valid = ["sleep_am","sleep_pm","food","habits","peso"];
+    if (s && valid.includes(s)) return s;
+  } catch (_) {}
   const t = new Date().getHours() * 60 + new Date().getMinutes();
   if (t >= 6*60  && t < 10*60)  return "sleep_am";
   if (t >= 10*60 && t < 14*60)  return "food";
   if (t >= 14*60 && t < 21*60)  return "food";
   if (t >= 21*60 && t < 23*60)  return "sleep_pm";
   return "sleep_am";
+}
+
+function getInitialFoodTab() {
+  // Para abrir directo en una comida específica del plan dinámico
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const c = params.get("comida");
+    if (c) return "hoy"; // siempre la tab Hoy; la comida se resalta por hora
+  } catch (_) {}
+  return "hoy";
 }
 
 function getGreeting() {
