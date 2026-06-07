@@ -262,6 +262,36 @@ async function updateCell(sheet, cell, value, token) {
   });
 }
 
+// Guarda una fila por fecha: si la fecha (columna A) ya existe, actualiza esa fila; si no, agrega
+async function upsertByDate(sheet, values, token) {
+  // Paso 1: Leer la columna A para encontrar si la fecha ya existe
+  const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet}!A:A`;
+  const res = await fetch(readUrl, { headers:{ "Authorization":`Bearer ${token}` } });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  const rows = data.values || [];
+  const dateStr = String(values[0]);
+  let rowIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][0] === dateStr) { rowIndex = i + 1; break; } // +1: filas 1-indexed
+  }
+  const rowValues = [values.map(v => String(v))];
+  if (rowIndex > 0) {
+    // Actualizar la fila existente
+    const lastCol = String.fromCharCode(64 + values.length); // 8 cols → "H"
+    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet}!A${rowIndex}:${lastCol}${rowIndex}?valueInputOption=RAW`;
+    const r = await fetch(updateUrl, {
+      method:"PUT",
+      headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json"},
+      body:JSON.stringify({ values:rowValues }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+  } else {
+    // Agregar fila nueva
+    await appendToSheet(sheet, values, token);
+  }
+}
+
 // ── FOOD ESTIMATE (local) ─────────────────────────────────────────────────
 const FOODDB = [
   { kw:["taco al pastor","taco pastor"], k:180 }, { kw:["taco"], k:150 },
@@ -643,7 +673,7 @@ export default function App() {
     const consumed = Object.values(log).reduce((s,m) => s+(m?.kcal||0), 0);
     const meals = MEAL_META.map(m => log[m.key] ? `${m.label}: ${log[m.key].name} (${log[m.key].kcal} kcal)` : `${m.label}: —`).join(" | ");
     try {
-      await appendToSheet("Historial_Alimentacion", [
+      await upsertByDate("Historial_Alimentacion", [
         activeDate, consumed, consumed-TARGET,
         log.des?.name||"—", log.cam?.name||"—", log.com?.name||"—",
         log.cpm?.name||"—", log.cen?.name||"—",
@@ -1045,12 +1075,17 @@ export default function App() {
               </div>
 
               {/* Cerrar día */}
-              {loggedKeys.length >= 3 && (
+              {loggedKeys.length >= 1 && (
                 <div style={{ ...card, padding:16 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:4 }}>¿Terminaste el día?</div>
-                  <div style={{ fontSize:12, color:MUTED, marginBottom:12, lineHeight:1.5 }}>Guarda el resumen en Sheets para tener tu historial permanente aunque limpies el caché.</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:4 }}>{dayClosed ? "Día guardado" : "Guardar día en tu historial"}</div>
+                  <div style={{ fontSize:12, color:MUTED, marginBottom:12, lineHeight:1.5 }}>Guarda el resumen en Sheets para tener tu historial permanente. Puedes volver a guardar si agregas más comidas.</div>
                   {dayClosed ? (
-                    <div style={{ textAlign:"center", fontSize:14, color:"#52B788", fontWeight:700, padding:8 }}>✓ Día guardado en Sheets</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      <div style={{ textAlign:"center", fontSize:14, color:"#52B788", fontWeight:700, padding:4 }}>✓ Guardado en Sheets</div>
+                      <button onClick={closeDay} disabled={closingDay} style={{ width:"100%", padding:"10px", borderRadius:12, border:`1px solid ${NEUTRAL2}`, background:"#fff", color:VINO, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                        {closingDay?"⏳ Guardando...":"↻ Volver a guardar (actualicé comidas)"}
+                      </button>
+                    </div>
                   ) : (
                     <button onClick={closeDay} disabled={closingDay} style={{ width:"100%", padding:"13px", borderRadius:12, border:"none", background:VINO, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:closingDay?0.7:1 }}>
                       {closingDay?"⏳ Guardando...":"📊 Cerrar día y guardar en Sheets"}
