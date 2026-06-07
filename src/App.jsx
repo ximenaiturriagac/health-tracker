@@ -275,7 +275,9 @@ const FOODDB = [
   { kw:["mango"], k:100 }, { kw:["fresas"], k:50 },
   { kw:["galleta"], k:50 }, { kw:["pan dulce","dona","concha"], k:300 },
   { kw:["huevo"], k:70 }, { kw:["yogur","yogurt"], k:120 }, { kw:["queso"], k:110 },
-  { kw:["leche"], k:120 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
+  { kw:["proteína","proteina","scoop","fitmingo","isopure"], k:140 },
+  { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 },
+  { kw:["leche deslactosada","500 ml leche","leche"], k:200 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
   { kw:["pasta","espagueti"], k:300 }, { kw:["ensalada"], k:150 }, { kw:["sopa","caldo"], k:180 },
   { kw:["pechuga","pollo"], k:200 }, { kw:["carne","bistec","res","arrachera"], k:250 },
   { kw:["camarón","camaron","camarones"], k:120 }, { kw:["salmón","salmon","atún","atun","pescado"], k:180 },
@@ -285,19 +287,62 @@ const FOODDB = [
   { kw:["elote"], k:100 }, { kw:["esquite"], k:250 },
 ];
 
+function wordMatch(text, kw) {
+  const isLetter = ch => /[a-záéíóúüñ0-9]/i.test(ch);
+  let from = 0;
+  while (from <= text.length) {
+    const pos = text.indexOf(kw, from);
+    if (pos < 0) return -1;
+    const before = pos === 0 ? " " : text[pos - 1];
+    let end = pos + kw.length;
+    if (text.substr(end, 2) === "es" && !isLetter(text[end + 2] || " ")) end += 2;
+    else if (text[end] === "s" && !isLetter(text[end + 1] || " ")) end += 1;
+    const after = end >= text.length ? " " : text[end];
+    if (!isLetter(before) && !isLetter(after)) return pos;
+    from = pos + 1;
+  }
+  return -1;
+}
+
+const WORDNUM = { "un":1,"una":1,"uno":1,"dos":2,"tres":3,"cuatro":4,"cinco":5,"media":0.5,"medio":0.5 };
+
 function localEstimate(text) {
-  const t = " " + text.toLowerCase() + " ";
+  const t = " " + text.toLowerCase().replace(/\s+/g, " ") + " ";
+  // Divide en platillos por separadores (no "con", para no romper frases)
+  const chunks = t.split(/,| y |\+|\/| mas | más /).map(s => s.trim()).filter(Boolean);
   let total = 0; const parts = [];
-  for (const f of FOODDB) {
-    for (const kw of f.kw) {
-      if (t.includes(" " + kw + " ") || t.includes(" " + kw + "s ")) {
-        const numMatch = t.match(/(\d+)\s*(?:porción|porciones|pieza|piezas|taco|tacos|rebanada)?\s*(?:de\s+)?' + kw/);
-        const qty = numMatch ? parseInt(numMatch[1]) : 1;
-        total += f.k * qty;
-        parts.push(`${kw} ~${f.k * qty} kcal`);
-        break;
+  for (const ch of chunks) {
+    let qty = 1;
+    // Solo tomar como cantidad números pequeños (1-20), no mililitros/gramos
+    const num = ch.match(/(?<![\d])(\d{1,2})(?!\s*(?:ml|g|gr|gramos|mililitros))(?![\d])/);
+    if (num && parseInt(num[1]) <= 20) qty = parseInt(num[1]);
+    else { for (const w in WORDNUM) { if (new RegExp("\\b" + w + "\\b").test(ch)) { qty = WORDNUM[w]; break; } } }
+    // Encuentra alimentos del chunk; evita contar el mismo alimento dos veces (sinónimos)
+    let rem = ch;
+    const found = [];
+    const usedFood = new Set();
+    while (true) {
+      let best = null;
+      for (let fi = 0; fi < FOODDB.length; fi++) {
+        if (usedFood.has(fi)) continue;
+        for (const kw of FOODDB[fi].kw) {
+          const pos = wordMatch(rem, kw);
+          if (pos >= 0 && (!best || kw.length > best.len)) best = { k:FOODDB[fi].k, len:kw.length, name:kw, pos, fi };
+        }
       }
+      if (!best) break;
+      usedFood.add(best.fi);
+      const origPos = wordMatch(ch, best.name);
+      found.push({ ...best, origPos: origPos >= 0 ? origPos : best.pos });
+      rem = rem.slice(0, best.pos) + " ".repeat(best.len) + rem.slice(best.pos + best.len);
     }
+    found.sort((a,b) => a.origPos - b.origPos);
+    found.forEach((f, idx) => {
+      const useQty = idx === 0 ? qty : 1;
+      const c = Math.round(f.k * useQty);
+      total += c;
+      parts.push(`${useQty !== 1 ? useQty + " " : ""}${f.name} ~${c} kcal`);
+    });
   }
   return total > 0 ? { kcal:total, desglose:parts.join(", ") } : null;
 }
