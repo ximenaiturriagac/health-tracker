@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── CONFIG ────────────────────────────────────────────────────────────────
 const CLIENT_ID = "309896660471-3i9106oa3dfbqu0ndbsdoa0a7bl9ol12.apps.googleusercontent.com";
@@ -200,7 +200,15 @@ function calcOptimalWake(bedtime) {
     const wh = Math.floor(wakeMin / 60);
     const wm = wakeMin % 60;
     return { cycles:c, label:`${wh}:${wm.toString().padStart(2,"0")}`, score:c===5?"ideal":c===4?"mínimo":"largo", wakeMin };
-  }).sort((a,b) => Math.abs(a.wakeMin-target) - Math.abs(b.wakeMin-target));
+  }).sort((a,b) => {
+    const da = Math.abs(a.wakeMin-target), db = Math.abs(b.wakeMin-target);
+    // Si ambos quedan dentro de 45 min del objetivo, prioriza el ciclo ideal (5)
+    if (Math.abs(da-db) <= 30) {
+      if (a.cycles === 5 && b.cycles !== 5) return -1;
+      if (b.cycles === 5 && a.cycles !== 5) return 1;
+    }
+    return da - db;
+  });
 }
 
 function getCurrentSection() {
@@ -417,7 +425,7 @@ export default function App() {
   const [weight, setWeight]             = useState("");
 
   // Food (dynamic plan)
-  const [foodDate, setFoodDate]         = useState(todayKey());
+  const [activeDate, setActiveDate]     = useState(todayKey());
   const [log, setLog]                   = useState({});
   const [history, setHistory]           = useState({});
   const [customFor, setCustomFor]       = useState(null);
@@ -435,7 +443,7 @@ export default function App() {
   const [dayClosed, setDayClosed]       = useState(false);
 
   const wakeOptions = calcOptimalWake(bedtime);
-  const planDayNum = Math.floor((new Date(foodDate+"T12:00:00") - new Date("2026-06-01T12:00:00")) / 86400000) + 1;
+  const planDayNum = Math.floor((new Date(activeDate+"T12:00:00") - new Date("2026-06-01T12:00:00")) / 86400000) + 1;
   const planLabel = planDayNum < 1 ? "Tu plan inicia el 1 de junio" : planDayNum <= 28 ? `Día ${planDayNum} de 28` : "Plan de 4 semanas completado 🎉";
 
   // ── Load from localStorage ──
@@ -462,7 +470,29 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => { loadDay(foodDate); }, [foodDate]);
+  const firstDateRun = useRef(true);
+  useEffect(() => {
+    loadDay(activeDate);
+    // En el montaje inicial NO limpiamos (para no borrar lo cargado de localStorage)
+    if (firstDateRun.current) { firstDateRun.current = false; return; }
+    // Al CAMBIAR de día, limpiar campos para no arrastrar valores
+    setPrevBedtime("23:00");
+    setActualWake("");
+    setSleepQuality(null);
+    setBedtime("23:00");
+    setSelectedWake(null);
+    setAgua(0);
+    setLectura(0);
+    setCustomValues(prev => {
+      const cleared = {};
+      Object.keys(prev).forEach(k => { cleared[k] = 0; });
+      return cleared;
+    });
+    setWeight("");
+    setSavedSection(null);
+    setHabitSaved(false);
+    setDayClosed(false);
+  }, [activeDate]);
 
   function loadDay(d) {
     const saved = LS.get(`ht_day:${d}`);
@@ -471,9 +501,9 @@ export default function App() {
   }
 
   function persistLog(nl) {
-    LS.set(`ht_day:${foodDate}`, nl);
+    LS.set(`ht_day:${activeDate}`, nl);
     const consumed = Object.values(nl).reduce((s,m) => s+(m?.kcal||0), 0);
-    const h = { ...history, [foodDate]:{ consumed, logged:Object.keys(nl).length } };
+    const h = { ...history, [activeDate]:{ consumed, logged:Object.keys(nl).length } };
     setHistory(h); LS.set("ht_history", h);
   }
 
@@ -523,7 +553,7 @@ export default function App() {
       const [wh,wm] = actualWake.split(":").map(Number);
       return (((wh*60+wm)-(bh*60+bm)+1440)%1440/60).toFixed(1);
     })() : "";
-    doSave("Sueno", [todayKey(), prevBedtime, actualWake, "", "", dur, sleepQuality||""], "sleep_am");
+    doSave("Sueno", [activeDate, prevBedtime, actualWake, "", "", dur, sleepQuality||""], "sleep_am");
   };
 
   const saveSleepPM = async () => {
@@ -532,8 +562,8 @@ export default function App() {
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
     setSaving(true);
     try {
-      await appendToSheet("Sueno", [todayKey(), bedtime, "", optimal, cycles, "", ""], token);
-      if (optimal) await appendToSheet("AlarmaAlexa", [todayKey(), optimal], token);
+      await appendToSheet("Sueno", [activeDate, bedtime, "", optimal, cycles, "", ""], token);
+      if (optimal) await appendToSheet("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
       if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
@@ -547,7 +577,7 @@ export default function App() {
     setSaving(true);
     try {
       const customVals = customHabits.map(h => customValues[h.name]||0);
-      await appendToSheet("Habitos", [todayKey(), agua, lectura, ...customVals], token);
+      await appendToSheet("Habitos", [activeDate, agua, lectura, ...customVals], token);
       setHabitSaved(true); setTimeout(() => setHabitSaved(false), 3000);
     } catch(e) {
       if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
@@ -558,7 +588,7 @@ export default function App() {
 
   const saveWeight = () => {
     if (!weight) { alert("Ingresa tu peso"); return; }
-    doSave("Sueno", [todayKey(), "", "", "", "", "", "", weight], "peso");
+    doSave("Sueno", [activeDate, "", "", "", "", "", "", weight], "peso");
   };
 
   const closeDay = async () => {
@@ -568,7 +598,7 @@ export default function App() {
     const meals = MEAL_META.map(m => log[m.key] ? `${m.label}: ${log[m.key].name} (${log[m.key].kcal} kcal)` : `${m.label}: —`).join(" | ");
     try {
       await appendToSheet("Historial_Alimentacion", [
-        foodDate, consumed, consumed-TARGET,
+        activeDate, consumed, consumed-TARGET,
         log.des?.name||"—", log.cam?.name||"—", log.com?.name||"—",
         log.cpm?.name||"—", log.cen?.name||"—",
       ], token);
@@ -617,7 +647,7 @@ export default function App() {
         if (pool.length >= 8) break;
       }
       const rest = nonShake.filter(o => !pool.includes(o));
-      const dayOff = pool.length ? new Date(foodDate+"T12:00:00").getDate() % pool.length : 0;
+      const dayOff = pool.length ? new Date(activeDate+"T12:00:00").getDate() % pool.length : 0;
       sorted = [...pool.slice(dayOff), ...pool.slice(0, dayOff), ...rest, ...shakes];
     }
     if (!shakeLoggedToday && key === "cpm") {
@@ -716,9 +746,25 @@ export default function App() {
       {/* HEADER */}
       <div style={{ background:`linear-gradient(135deg,${VINO},${VINO2})`, color:"#fff", padding:"20px 18px 16px" }}>
         <div style={{ fontSize:12, opacity:0.75, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:4 }}>
-          {getGreeting()} · {DAYS_ES[now.getDay()]} {now.getDate()} mayo
+          {getGreeting()} · {DAYS_ES[now.getDay()]} {now.getDate()} {["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"][now.getMonth()]}
         </div>
         <div style={{ fontSize:24, fontWeight:800 }}>Mi Tracker de Salud</div>
+
+        {/* Selector de fecha global */}
+        <div style={{ marginTop:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+          <span style={{ fontSize:12, opacity:0.85 }}>Registrando el día:</span>
+          <input type="date" value={activeDate} max={todayKey()} onChange={e=>setActiveDate(e.target.value)}
+            style={{ border:"none", borderRadius:8, padding:"5px 10px", fontSize:13, fontFamily:"inherit", background:"rgba(255,255,255,0.9)", color:TEXT, fontWeight:600 }} />
+          {activeDate !== todayKey() && (
+            <button onClick={()=>setActiveDate(todayKey())} style={{ border:"none", background:"rgba(255,255,255,0.25)", color:"#fff", borderRadius:8, padding:"5px 10px", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Hoy</button>
+          )}
+        </div>
+        {activeDate !== todayKey() && (
+          <div style={{ marginTop:6, fontSize:11, background:"rgba(255,255,255,0.18)", borderRadius:8, padding:"4px 10px", display:"inline-block" }}>
+            ✏️ Registrando un día pasado
+          </div>
+        )}
+
         {!token ? (
           <button onClick={handleAuth} disabled={authLoading} style={{ marginTop:12, padding:"9px 18px", borderRadius:10, border:"none", background:"rgba(255,255,255,0.2)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer" }}>
             {authLoading?"⏳ Conectando...":"🔗 Conectar Google Sheets"}
@@ -857,7 +903,7 @@ export default function App() {
             {foodTab === "hoy" && <>
               <div style={{ ...card, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 <div style={{ fontSize:11, color:VINO, fontWeight:700 }}>{planLabel}</div>
-                <input type="date" value={foodDate} min="2026-06-01" onChange={e=>setFoodDate(e.target.value)} style={{ border:`1px solid ${NEUTRAL2}`, borderRadius:8, padding:"5px 9px", fontSize:13, fontFamily:"inherit" }} />
+                <div style={{ fontSize:11, color:MUTED }}>{activeDate === todayKey() ? "Hoy" : fmtShort(activeDate)}</div>
               </div>
 
               <div style={{ ...card, padding:16, textAlign:"center" }}>
