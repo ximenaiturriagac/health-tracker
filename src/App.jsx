@@ -318,7 +318,7 @@ const FOODDB = [
   { kw:["elote"], k:100 }, { kw:["esquite"], k:250 },
   { kw:["jamón","jamon"], k:50 }, { kw:["crema"], k:110 }, { kw:["mantequilla"], k:70 },
   { kw:["mermelada"], k:50 }, { kw:["miel"], k:60 }, { kw:["tocino"], k:90 },
-  { kw:["salchicha"], k:80 }, { kw:["mayonesa"], k:90 }, { kw:["aderezo"], k:80 },
+  { kw:["salchichas de pavo","salchicha de pavo","salchicha pavo"], k:87 }, { kw:["salchichas de res costco","salchicha de res costco","salchicha costco","salchicha kirkland","salchichas de res","salchicha de res"], k:170 }, { kw:["salchichas cocktail","salchicha cocktail","salchichas coctel","salchicha coctel"], k:25 }, { kw:["salchicha"], k:80 }, { kw:["mayonesa"], k:90 }, { kw:["aderezo"], k:80 },
   { kw:["nutella","crema de avellana"], k:100 }, { kw:["azúcar","azucar"], k:50 },
   { kw:["leche condensada","lechera"], k:130 }, { kw:["nata"], k:80 },
   { kw:["tlacoyo"], k:230 }, { kw:["sope"], k:200 }, { kw:["gordita"], k:280 },
