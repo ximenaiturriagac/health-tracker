@@ -516,7 +516,7 @@ export default function App() {
     setSaving(true);
     try {
       await appendToSheet("Sueno", [todayKey(), bedtime, "", optimal, cycles, "", ""], token);
-      if (optimal) await updateCell("AlarmaAlexa", "B2", optimal, token);
+      if (optimal) await appendToSheet("AlarmaAlexa", [todayKey(), optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
       if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
