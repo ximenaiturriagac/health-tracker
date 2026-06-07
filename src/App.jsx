@@ -5,7 +5,7 @@ const CLIENT_ID = "309896660471-3i9106oa3dfbqu0ndbsdoa0a7bl9ol12.apps.googleuser
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 const SHEET_ID = "1b2oHbykr31dMu6QGwy8puWhh-F5Xbd40RQBDEpXhgSs";
 const PLAN_START = new Date("2026-06-01");
-const TARGET = 1450;
+const TARGET = 1550;
 
 // ── STORAGE (localStorage) ────────────────────────────────────────────────
 const LS = {
@@ -274,7 +274,8 @@ const FOODDB = [
   { kw:["manzana"], k:75 }, { kw:["plátano","platano"], k:105 }, { kw:["naranja"], k:65 },
   { kw:["mango"], k:100 }, { kw:["fresas"], k:50 },
   { kw:["galleta"], k:50 }, { kw:["pan dulce","dona","concha"], k:300 },
-  { kw:["huevo"], k:70 }, { kw:["yogur","yogurt"], k:120 }, { kw:["queso"], k:110 },
+  { kw:["huevo"], k:70 }, { kw:["yogur","yogurt"], k:120 }, { kw:["cottage","queso cottage","requesón"], k:90 }, { kw:["queso panela","panela"], k:90 }, { kw:["queso"], k:110 },
+  { kw:["papaya"], k:60 }, { kw:["sandía","sandia"], k:50 }, { kw:["melón","melon"], k:60 }, { kw:["piña","pina"], k:80 }, { kw:["uvas","uva"], k:90 }, { kw:["durazno"], k:60 }, { kw:["arándanos","arandanos"], k:60 }, { kw:["mandarina"], k:45 }, { kw:["kiwi"], k:45 },
   { kw:["proteína","proteina","scoop","fitmingo","isopure"], k:140 },
   { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 },
   { kw:["leche deslactosada","500 ml leche","leche"], k:200 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
@@ -762,12 +763,12 @@ export default function App() {
   }
 
   let advice, aCol, aBg;
-  if (loggedKeys.length === 0) { advice="Elige tu primera comida. Las opciones se ajustan a tu meta de 1,450 kcal."; aCol=MUTED; aBg=NEUTRAL; }
+  if (loggedKeys.length === 0) { advice="Elige tu primera comida. Las opciones se ajustan a tu meta de 1,550 kcal."; aCol=MUTED; aBg=NEUTRAL; }
   else if (loggedKeys.length === 5) {
     if (consumed <= TARGET+50) { advice=`¡Día completo! Cerraste en ${consumed} kcal. 🎉`; aCol=VINO; aBg=VINO_LIGHT; }
     else { advice=`Cerraste en ${consumed} kcal (${consumed-TARGET} sobre la meta). Mañana retomas.`; aCol="#92500E"; aBg="#FBEEDD"; }
   } else if (remaining < 0) { advice=`Superaste tu meta por ${Math.abs(remaining)} kcal. Verás solo opciones ligeras.`; aCol="#92500E"; aBg="#FBEEDD"; }
-  else { advice=`Te quedan ${remaining} kcal. Las opciones ya están dimensionadas para cerrar cerca de 1,450.`; aCol=VINO; aBg=VINO_LIGHT; }
+  else { advice=`Te quedan ${remaining} kcal. Las opciones ya están dimensionadas para cerrar cerca de 1,550.`; aCol=VINO; aBg=VINO_LIGHT; }
 
   const recipeList = Object.entries(RECIPES)
     .filter(([,r]) => r.t.toLowerCase().includes(recipeSearch.toLowerCase()))
