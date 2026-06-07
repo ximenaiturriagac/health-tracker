@@ -537,7 +537,9 @@ export default function App() {
   // ── Load from localStorage ──
   useEffect(() => {
     const t = localStorage.getItem("ht_token");
-    if (t) setToken(t);
+    const exp = parseInt(localStorage.getItem("ht_token_exp") || "0");
+    if (t && Date.now() < exp) setToken(t);
+    else { localStorage.removeItem("ht_token"); localStorage.removeItem("ht_token_exp"); }
     const h = LS.get("ht_history"); if (h) setHistory(h);
     const s = LS.get("ht_shopping"); if (s) setShopChecked(s);
     const ch = LS.get("ht_custom_habits"); if (ch) setCustomHabits(ch);
@@ -604,33 +606,51 @@ export default function App() {
   }
 
   // ── Auth ──
-  const handleAuth = useCallback(() => {
+  const handleAuth = useCallback((silent = false) => {
     if (!window.google?.accounts?.oauth2) {
-      setTimeout(() => { if (window.google?.accounts?.oauth2) handleAuth(); }, 1500);
+      setTimeout(() => { if (window.google?.accounts?.oauth2) handleAuth(silent); }, 1500);
       return;
     }
-    setAuthLoading(true);
+    if (!silent) setAuthLoading(true);
     window.google.accounts.oauth2.initTokenClient({
       client_id:CLIENT_ID, scope:SCOPES,
+      prompt: silent ? "none" : "",
       callback:(resp) => {
         setAuthLoading(false);
-        if (resp.error) { alert("Error: "+resp.error); return; }
+        if (resp.error) {
+          // Si falla el silent, pedir login normal
+          if (silent) handleAuth(false);
+          else alert("Error de autenticación: " + resp.error);
+          return;
+        }
         setToken(resp.access_token);
         localStorage.setItem("ht_token", resp.access_token);
+        // Guardar el momento de expiración (~55 min para tener margen)
+        localStorage.setItem("ht_token_exp", String(Date.now() + 55 * 60 * 1000));
       },
     }).requestAccessToken();
   }, []);
 
+  // Detectar si el token guardado ya expiró antes de usarlo
+  function getValidToken() {
+    const exp = parseInt(localStorage.getItem("ht_token_exp") || "0");
+    if (Date.now() > exp) { setToken(null); localStorage.removeItem("ht_token"); return null; }
+    return token;
+  }
+
   // ── Sheets saves ──
   const doSave = async (sheet, values, sec) => {
-    if (!token) { handleAuth(); return; }
+    const t = getValidToken() || token;
+    if (!t) { handleAuth(); return; }
     setSaving(true);
     try {
-      await appendToSheet(sheet, values, token);
+      await appendToSheet(sheet, values, t);
       setSavedSection(sec); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
-      if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
-      else alert("Error: "+e.message);
+      if (e.message.includes("401") || e.message.includes("403")) {
+        setToken(null); localStorage.removeItem("ht_token");
+        handleAuth();
+      } else alert("Error al guardar: " + e.message);
     }
     setSaving(false);
   };
@@ -645,6 +665,7 @@ export default function App() {
   };
 
   const saveSleepPM = async () => {
+    const token = getValidToken() || (setToken(null), null);
     if (!token) { handleAuth(); return; }
     const optimal = selectedWake || wakeOptions?.[0]?.label || "";
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
@@ -654,13 +675,14 @@ export default function App() {
       if (optimal) await appendToSheet("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
-      if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
+      if (e.message.includes("401") || e.message.includes("403")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
       else alert("Error: "+e.message);
     }
     setSaving(false);
   };
 
   const saveHabits = async () => {
+    const token = getValidToken() || (setToken(null), null);
     if (!token) { handleAuth(); return; }
     setSaving(true);
     try {
@@ -668,7 +690,7 @@ export default function App() {
       await appendToSheet("Habitos", [activeDate, agua, lectura, ...customVals], token);
       setHabitSaved(true); setTimeout(() => setHabitSaved(false), 3000);
     } catch(e) {
-      if (e.message.includes("401")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
+      if (e.message.includes("401") || e.message.includes("403")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
       else alert("Error: "+e.message);
     }
     setSaving(false);
@@ -680,6 +702,7 @@ export default function App() {
   };
 
   const closeDay = async () => {
+    const token = getValidToken() || (setToken(null), null);
     if (!token) { handleAuth(); return; }
     setClosingDay(true);
     const consumed = Object.values(log).reduce((s,m) => s+(m?.kcal||0), 0);
