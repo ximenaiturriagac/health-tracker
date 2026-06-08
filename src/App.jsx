@@ -684,7 +684,7 @@ export default function App() {
       }
       dur = (total / 60).toFixed(1);
     }
-    doSave("Sueno", [activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", firstWake||"", backToBed||""], "sleep_am");
+    doSave("Sueno", [activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", "", firstWake||"", backToBed||""], "sleep_am");
   };
 
   const saveSleepPM = async () => {
@@ -694,7 +694,7 @@ export default function App() {
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
     setSaving(true);
     try {
-      await appendToSheet("Sueno", [activeDate, bedtime, "", optimal, cycles, "", ""], token);
+      await appendToSheet("Sueno", [activeDate, bedtime, "", optimal, cycles, "", "", "", "", ""], token);
       if (optimal) await appendToSheet("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
@@ -721,7 +721,7 @@ export default function App() {
 
   const saveWeight = () => {
     if (!weight) { alert("Ingresa tu peso"); return; }
-    doSave("Sueno", [activeDate, "", "", "", "", "", "", weight], "peso");
+    doSave("Sueno", [activeDate, "", "", "", "", "", "", weight, "", ""], "peso");
   };
 
   const closeDay = async () => {
