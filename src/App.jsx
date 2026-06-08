@@ -492,7 +492,9 @@ export default function App() {
 
   // Sleep AM
   const [prevBedtime, setPrevBedtime]   = useState("23:00");
-  const [actualWake, setActualWake]     = useState("");
+  const [firstWake, setFirstWake]       = useState("");
+  const [backToBed, setBackToBed]       = useState("");   // hora en que volviste a dormirte
+  const [actualWake, setActualWake]     = useState("");   // despertar final
   const [sleepQuality, setSleepQuality] = useState(null);
   // Sleep PM
   const [bedtime, setBedtime]           = useState("23:00");
@@ -570,6 +572,9 @@ export default function App() {
     // Al CAMBIAR de día, limpiar campos para no arrastrar valores
     setPrevBedtime("23:00");
     setActualWake("");
+    setFirstWake("");
+    setBackToBed("");
+    setFirstWake("");
     setSleepQuality(null);
     setBedtime("23:00");
     setSelectedWake(null);
@@ -658,12 +663,28 @@ export default function App() {
   };
 
   const saveSleepAM = () => {
-    const dur = actualWake && prevBedtime ? (() => {
-      const [bh,bm] = prevBedtime.split(":").map(Number);
-      const [wh,wm] = actualWake.split(":").map(Number);
-      return (((wh*60+wm)-(bh*60+bm)+1440)%1440/60).toFixed(1);
-    })() : "";
-    doSave("Sueno", [activeDate, prevBedtime, actualWake, "", "", dur, sleepQuality||""], "sleep_am");
+    const minsBetween = (from, to) => {
+      const [fh,fm] = from.split(":").map(Number);
+      const [th,tm] = to.split(":").map(Number);
+      return ((th*60+tm) - (fh*60+fm) + 1440) % 1440;
+    };
+    let dur = "";
+    // Bloque 1: dormir → primer despertar
+    // Bloque 2: volver a dormir → despertar final
+    const hasTwoBlocks = firstWake && backToBed && actualWake;
+    const finalWake = actualWake || firstWake;
+    if (prevBedtime && finalWake) {
+      let total;
+      if (hasTwoBlocks) {
+        const block1 = minsBetween(prevBedtime, firstWake);
+        const block2 = minsBetween(backToBed, actualWake);
+        total = block1 + block2;
+      } else {
+        total = minsBetween(prevBedtime, finalWake);
+      }
+      dur = (total / 60).toFixed(1);
+    }
+    doSave("Sueno", [activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", firstWake||"", backToBed||""], "sleep_am");
   };
 
   const saveSleepPM = async () => {
@@ -919,24 +940,75 @@ export default function App() {
               </div>
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <div>
-                <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>¿A qué hora te dormiste anoche?</div>
-                <input type="time" value={prevBedtime} onChange={e=>setPrevBedtime(e.target.value)} style={{ fontSize:28, fontWeight:700, border:"none", background:NEUTRAL, borderRadius:12, padding:"10px 16px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
-              </div>
-              <div>
-                <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>¿A qué hora te despertaste?</div>
-                <input type="time" value={actualWake} onChange={e=>setActualWake(e.target.value)} style={{ fontSize:28, fontWeight:700, border:"none", background:NEUTRAL, borderRadius:12, padding:"10px 16px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
-              </div>
-              {prevBedtime && actualWake && (
-                <div style={{ background:VINO_LIGHT, borderRadius:12, padding:"12px 14px", display:"flex", justifyContent:"space-between" }}>
-                  <div>
-                    <div style={{ fontSize:11, color:VINO, fontWeight:600 }}>Dormiste</div>
-                    <div style={{ fontSize:22, fontWeight:800, color:VINO }}>
-                      {(() => { const [bh,bm]=prevBedtime.split(":").map(Number); const [wh,wm]=actualWake.split(":").map(Number); const min=((wh*60+wm)-(bh*60+bm)+1440)%1440; return `${Math.floor(min/60)}h ${min%60}m`; })()}
-                    </div>
+
+              {/* BLOQUE 1 */}
+              <div style={{ background:NEUTRAL, borderRadius:14, padding:"14px 14px 10px" }}>
+                <div style={{ fontSize:11, color:VINO, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Bloque 1</div>
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:12, color:MUTED, marginBottom:6, fontWeight:600 }}>Me dormí a las</div>
+                  <input type="time" value={prevBedtime} onChange={e=>setPrevBedtime(e.target.value)} style={{ fontSize:26, fontWeight:700, border:"none", background:"#fff", borderRadius:10, padding:"8px 14px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:12, color:MUTED, marginBottom:6, fontWeight:600 }}>Me desperté a las</div>
+                  <input type="time" value={firstWake} onChange={e=>setFirstWake(e.target.value)} style={{ fontSize:26, fontWeight:700, border:"none", background:"#fff", borderRadius:10, padding:"8px 14px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
+                </div>
+                {prevBedtime && firstWake && (
+                  <div style={{ marginTop:8, fontSize:12, color:VINO, fontWeight:600 }}>
+                    {(() => { const [bh,bm]=prevBedtime.split(":").map(Number); const [wh,wm]=firstWake.split(":").map(Number); const min=((wh*60+wm)-(bh*60+bm)+1440)%1440; return `⏱ ${Math.floor(min/60)}h ${min%60}m`; })()}
                   </div>
+                )}
+              </div>
+
+              {/* Toggle bloque 2 */}
+              {!firstWake ? null : !backToBed && !actualWake ? (
+                <button onClick={() => setBackToBed("04:00")} style={{ background:"transparent", border:`1.5px dashed ${VINO2}`, borderRadius:12, padding:"10px", fontSize:13, fontWeight:600, color:VINO, cursor:"pointer", fontFamily:"inherit" }}>
+                  + Me volví a dormir (agregar bloque 2)
+                </button>
+              ) : (
+                <div style={{ background:NEUTRAL, borderRadius:14, padding:"14px 14px 10px" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                    <div style={{ fontSize:11, color:VINO, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em" }}>Bloque 2</div>
+                    <button onClick={() => { setBackToBed(""); setActualWake(""); }} style={{ background:"transparent", border:"none", color:MUTED, fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>✕ quitar</button>
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:12, color:MUTED, marginBottom:6, fontWeight:600 }}>Me volví a dormir a las</div>
+                    <input type="time" value={backToBed} onChange={e=>setBackToBed(e.target.value)} style={{ fontSize:26, fontWeight:700, border:"none", background:"#fff", borderRadius:10, padding:"8px 14px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:12, color:MUTED, marginBottom:6, fontWeight:600 }}>Me desperté definitivamente a las</div>
+                    <input type="time" value={actualWake} onChange={e=>setActualWake(e.target.value)} style={{ fontSize:26, fontWeight:700, border:"none", background:"#fff", borderRadius:10, padding:"8px 14px", color:TEXT, width:"100%", boxSizing:"border-box", fontFamily:"inherit" }} />
+                  </div>
+                  {backToBed && actualWake && (
+                    <div style={{ marginTop:8, fontSize:12, color:VINO, fontWeight:600 }}>
+                      {(() => { const [bh,bm]=backToBed.split(":").map(Number); const [wh,wm]=actualWake.split(":").map(Number); const min=((wh*60+wm)-(bh*60+bm)+1440)%1440; return `⏱ ${Math.floor(min/60)}h ${min%60}m`; })()}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Total */}
+              {prevBedtime && (firstWake || actualWake) && (
+                <div style={{ background:VINO_LIGHT, borderRadius:12, padding:"12px 14px" }}>
+                  <div style={{ fontSize:11, color:VINO, fontWeight:600 }}>Total dormido</div>
+                  <div style={{ fontSize:26, fontWeight:800, color:VINO }}>
+                    {(() => {
+                      const mins = (from, to) => { const [fh,fm]=from.split(":").map(Number); const [th,tm]=to.split(":").map(Number); return ((th*60+tm)-(fh*60+fm)+1440)%1440; };
+                      const hasTwoBlocks = firstWake && backToBed && actualWake;
+                      const total = hasTwoBlocks
+                        ? mins(prevBedtime, firstWake) + mins(backToBed, actualWake)
+                        : mins(prevBedtime, actualWake||firstWake);
+                      return `${Math.floor(total/60)}h ${total%60}m`;
+                    })()}
+                  </div>
+                  {firstWake && backToBed && actualWake && (
+                    <div style={{ fontSize:11, color:VINO, opacity:0.8, marginTop:2 }}>
+                      Bloque 1 + Bloque 2 · sin contar el tiempo despierta
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Calidad */}
               <div>
                 <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>Calidad del sueño</div>
                 <div style={{ display:"flex", gap:8 }}>
