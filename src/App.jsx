@@ -263,21 +263,25 @@ async function updateCell(sheet, cell, value, token) {
 }
 
 // Guarda una fila por fecha: si la fecha (columna A) ya existe, actualiza esa fila; si no, agrega
-async function upsertByDate(sheet, values, token) {
-  // Paso 1: Leer la columna A para encontrar si la fecha ya existe
-  const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${sheet}!A:A`;
+async function upsertByDate(sheet, values, token, matchCols = 1) {
+  // matchCols=1: busca por columna A (fecha)
+  // matchCols=2: busca por columnas A+B (tipo+fecha) — para Sueno que tiene Tipo en col A
+  const range = matchCols === 2 ? `${sheet}!A:B` : `${sheet}!A:A`;
+  const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${range}`;
   const res = await fetch(readUrl, { headers:{ "Authorization":`Bearer ${token}` } });
   if (!res.ok) throw new Error(await res.text());
   const data = await res.json();
   const rows = data.values || [];
-  const dateStr = String(values[0]);
+  const keyA = String(values[0]);
+  const keyB = matchCols === 2 ? String(values[1]) : null;
   let rowIndex = -1;
   for (let i = 0; i < rows.length; i++) {
-    if (rows[i][0] === dateStr) { rowIndex = i + 1; break; } // +1: filas 1-indexed
+    const matchA = rows[i][0] === keyA;
+    const matchB = matchCols === 2 ? rows[i]?.[1] === keyB : true;
+    if (matchA && matchB) { rowIndex = i + 1; break; }
   }
   const rowValues = [values.map(v => String(v))];
   if (rowIndex > 0) {
-    // Actualizar la fila existente
     const lastCol = values.length <= 26
       ? String.fromCharCode(64 + values.length)
       : "A" + String.fromCharCode(64 + values.length - 26);
@@ -289,7 +293,6 @@ async function upsertByDate(sheet, values, token) {
     });
     if (!r.ok) throw new Error(await r.text());
   } else {
-    // Agregar fila nueva
     await appendToSheet(sheet, values, token);
   }
 }
@@ -646,12 +649,12 @@ export default function App() {
   }
 
   // ── Sheets saves ──
-  const doSave = async (sheet, values, sec) => {
+  const doSave = async (sheet, values, sec, matchCols = 1) => {
     const t = getValidToken() || token;
     if (!t) { handleAuth(); return; }
     setSaving(true);
     try {
-      await appendToSheet(sheet, values, t);
+      await upsertByDate(sheet, values, t, matchCols);
       setSavedSection(sec); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
       if (e.message.includes("401") || e.message.includes("403")) {
@@ -684,7 +687,7 @@ export default function App() {
       }
       dur = (total / 60).toFixed(1);
     }
-    doSave("Sueno", [activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", "", firstWake||"", backToBed||""], "sleep_am");
+    doSave("Sueno", ["AM", activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", "", firstWake||"", backToBed||""], "sleep_am", 2);
   };
 
   const saveSleepPM = async () => {
@@ -694,8 +697,8 @@ export default function App() {
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
     setSaving(true);
     try {
-      await appendToSheet("Sueno", [activeDate, bedtime, "", optimal, cycles, "", "", "", "", ""], token);
-      if (optimal) await appendToSheet("AlarmaAlexa", [activeDate, optimal], token);
+      await upsertByDate("Sueno", ["PM", activeDate, bedtime, "", optimal, cycles, "", "", "", "", ""], token, 2);
+      if (optimal) await upsertByDate("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
       if (e.message.includes("401") || e.message.includes("403")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
@@ -710,7 +713,7 @@ export default function App() {
     setSaving(true);
     try {
       const customVals = customHabits.map(h => customValues[h.name]||0);
-      await appendToSheet("Habitos", [activeDate, agua, lectura, ...customVals], token);
+      await upsertByDate("Habitos", [activeDate, agua, lectura, ...customVals], token);
       setHabitSaved(true); setTimeout(() => setHabitSaved(false), 3000);
     } catch(e) {
       if (e.message.includes("401") || e.message.includes("403")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
@@ -721,7 +724,7 @@ export default function App() {
 
   const saveWeight = () => {
     if (!weight) { alert("Ingresa tu peso"); return; }
-    doSave("Sueno", [activeDate, "", "", "", "", "", "", weight, "", ""], "peso");
+    doSave("Sueno", ["Peso", activeDate, "", "", "", "", "", "", weight, "", ""], "peso", 2);
   };
 
   const closeDay = async () => {
