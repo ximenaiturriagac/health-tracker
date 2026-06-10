@@ -12,7 +12,10 @@ const LS = {
   get: (key) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; } },
   set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
 };
-const todayKey = () => new Date().toISOString().split("T")[0];
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 const fmtShort = (d) => { const [, m, day] = d.split("-"); return `${day}/${m}`; };
 
 // ── BARCODE / OPEN FOOD FACTS ─────────────────────────────────────────────
@@ -330,7 +333,7 @@ const FOODDB = [
   { kw:["tamal"], k:250 }, { kw:["menudo"], k:280 },
   { kw:["bolillo","telera"], k:180 }, { kw:["pan tostado","rebanada de pan","pan"], k:80 },
   { kw:["agua de melón","agua de melon","agua de melon natural"], k:90 }, { kw:["agua de horchata","horchata"], k:150 }, { kw:["agua de jamaica","jamaica"], k:90 },
-  { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:460 }, { kw:["licuado de fresa","licuado de fresas"], k:400 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
+  { kw:["pechuga empanizada","pollo empanizado","milanesa de pollo empanizada","milanesa pollo"], k:288 }, { kw:["milanesa de res empanizada","milanesa de res","milanesa empanizada","milanesa"], k:265 }, { kw:["sopa de fideo","fideo","fideos"], k:180 }, { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:460 }, { kw:["licuado de fresa","licuado de fresas"], k:400 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
   { kw:["chicharrón de cerdo","chicharron de cerdo","chicharrón","chicharron"], k:174 }, { kw:["papas fritas de bolsa","sabritas","frituras"], k:280 },
   { kw:["flan","gelatina"], k:200 },
 ];
