@@ -305,7 +305,7 @@ const FOODDB = [
   { kw:["taco de carnitas","taco carnitas","tacos de carnitas","tacos carnitas"], k:110 }, { kw:["taco al pastor","taco pastor"], k:180 }, { kw:["taco"], k:150 },
   { kw:["quesadilla"], k:250 }, { kw:["torta"], k:450 }, { kw:["enchilada"], k:170 },
   { kw:["chilaquiles"], k:400 }, { kw:["pozole"], k:300 }, { kw:["tostada"], k:130 },
-  { kw:["pizza"], k:285 }, { kw:["hamburguesa"], k:500 }, { kw:["sandwich","sándwich"], k:350 },
+  { kw:["pizza"], k:285 }, { kw:["hamburguesa"], k:500 }, { kw:["hot dog costco","hot dog de costco"], k:570 }, { kw:["hot dog","hotdog"], k:270 }, { kw:["waffle de avena","waffles de avena"], k:120 }, { kw:["waffle","waffles"], k:220 }, { kw:["sandwich","sándwich"], k:350 },
   { kw:["café con leche","cafe con leche"], k:80 }, { kw:["latte","capuchino"], k:130 },
   { kw:["café","cafe","té","te"], k:5 }, { kw:["sidral mundet","refresco de manzana mundet","refresco mundet","mundet"], k:71 }, { kw:["refresco","coca"], k:150 },
   { kw:["cerveza"], k:150 }, { kw:["vino"], k:125 },
