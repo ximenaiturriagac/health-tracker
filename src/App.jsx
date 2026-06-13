@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 // ── CONFIG ────────────────────────────────────────────────────────────────
 const CLIENT_ID = "309896660471-3i9106oa3dfbqu0ndbsdoa0a7bl9ol12.apps.googleusercontent.com";
@@ -23,13 +23,21 @@ async function lookupBarcode(code) {
   const saved = LS.get("ht_products") || {};
   if (saved[code]) return { ...saved[code], source: "guardado" };
   try {
-    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,nutriments,brands`);
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,nutriments,brands,serving_size`,
+      { headers: { "User-Agent": "HealthTracker/1.0" } }
+    );
     const data = await res.json();
     if (data.status === 1 && data.product) {
       const p = data.product;
       const n = p.nutriments || {};
-      const kcal = n["energy-kcal_serving"] || n["energy-kcal_100g"] || null;
-      const name = [p.brands, p.product_name].filter(Boolean).join(" ") || "Producto";
+      // Intentar varios campos de kcal en orden de preferencia
+      const kcal = n["energy-kcal_serving"]
+        || n["energy-kcal_100g"]
+        || (n["energy_serving"] ? Math.round(n["energy_serving"] / 4.184) : null)
+        || (n["energy_100g"] ? Math.round(n["energy_100g"] / 4.184) : null)
+        || null;
+      const name = [p.brands, p.product_name].filter(Boolean).join(" · ") || "Producto";
       return { name, kcal: kcal ? Math.round(kcal) : null, source: "openfoodfacts", code };
     }
   } catch (_) {}
@@ -333,7 +341,7 @@ const FOODDB = [
   { kw:["tamal"], k:250 }, { kw:["menudo"], k:280 },
   { kw:["bolillo","telera"], k:180 }, { kw:["pan tostado","rebanada de pan","pan"], k:80 },
   { kw:["agua de melón","agua de melon","agua de melon natural"], k:90 }, { kw:["agua de horchata","horchata"], k:150 }, { kw:["agua de jamaica","jamaica"], k:90 },
-  { kw:["pechuga empanizada","pollo empanizado","milanesa de pollo empanizada","milanesa pollo"], k:288 }, { kw:["milanesa de res empanizada","milanesa de res","milanesa empanizada","milanesa"], k:265 }, { kw:["sopa de fideo","fideo","fideos"], k:180 }, { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:460 }, { kw:["licuado de fresa","licuado de fresas"], k:400 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
+  { kw:["pechuga empanizada","pollo empanizado","milanesa de pollo empanizada","milanesa pollo"], k:288 }, { kw:["milanesa de res empanizada","milanesa de res","milanesa empanizada","milanesa"], k:265 }, { kw:["sopa de fideo","fideo","fideos"], k:180 }, { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["snack tajín","snack tajin","tajín","tajin"], k:36 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:460 }, { kw:["licuado de fresa","licuado de fresas"], k:400 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
   { kw:["chicharrón de cerdo","chicharron de cerdo","chicharrón","chicharron"], k:174 }, { kw:["papas fritas de bolsa","sabritas","frituras"], k:280 },
   { kw:["flan","gelatina"], k:200 },
 ];
@@ -448,37 +456,66 @@ function SaveBtn({ onClick, saving, saved, label }) {
 // ── BARCODE SCANNER MODAL ─────────────────────────────────────────────────
 function ScannerModal({ onDetected, onClose }) {
   const [status, setStatus] = useState("Cargando cámara...");
+  const onDetectedRef = React.useRef(onDetected);
+  onDetectedRef.current = onDetected;
 
   useEffect(() => {
     let scanner = null;
     let cancelled = false;
+    let attempts = 0;
 
     function start() {
-      if (!window.Html5Qrcode) { setStatus("Cargando librería..."); setTimeout(start, 500); return; }
+      if (!window.Html5Qrcode) {
+        if (attempts++ < 20) { setStatus("Cargando librería..."); setTimeout(start, 500); }
+        else setStatus("No se pudo cargar el scanner. Verifica tu conexión.");
+        return;
+      }
       try {
         scanner = new window.Html5Qrcode("scanner-region");
+        const config = { fps: 10, qrbox: { width: 240, height: 140 }, aspectRatio: 1.7 };
         scanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 150 } },
+          config,
           (decodedText) => {
             if (cancelled) return;
             cancelled = true;
-            scanner.stop().then(() => onDetected(decodedText)).catch(() => onDetected(decodedText));
+            scanner.stop()
+              .then(() => onDetectedRef.current(decodedText))
+              .catch(() => onDetectedRef.current(decodedText));
           },
           () => {}
-        ).then(() => setStatus("Apunta al código de barras"))
-         .catch(() => setStatus("No se pudo acceder a la cámara. Revisa permisos en Safari."));
-      } catch (e) { setStatus("Error al iniciar scanner."); }
+        )
+        .then(() => setStatus("📷 Apunta al código de barras del producto"))
+        .catch((err) => {
+          const msg = err?.message || String(err);
+          if (msg.includes("permission") || msg.includes("Permission")) {
+            setStatus("Permiso de cámara denegado. Ve a Ajustes > Safari > Cámara y permite el acceso.");
+          } else {
+            setStatus("No se pudo iniciar la cámara. Intenta recargar la página.");
+          }
+        });
+      } catch (e) {
+        setStatus("Error al iniciar scanner: " + (e?.message || e));
+      }
     }
-    start();
-    return () => { cancelled = true; if (scanner) scanner.stop().catch(() => {}); };
-  }, [onDetected]);
+
+    // Pequeño delay para que el DOM monte el div antes de iniciar
+    const timer = setTimeout(start, 300);
+    return () => {
+      clearTimeout(timer);
+      cancelled = true;
+      if (scanner) scanner.stop().catch(() => {});
+    };
+  }, []); // Sin dependencias — onDetected se accede por ref
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ color:"#fff", fontSize:14, marginBottom:16, fontWeight:600 }}>{status}</div>
-      <div id="scanner-region" style={{ width:"100%", maxWidth:340, borderRadius:16, overflow:"hidden", background:"#000" }} />
-      <button onClick={onClose} style={{ marginTop:20, padding:"12px 28px", borderRadius:12, border:"none", background:"#fff", color:"#2C2528", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Cancelar</button>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.9)", zIndex:1000, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ color:"#fff", fontSize:13, marginBottom:14, fontWeight:600, textAlign:"center", lineHeight:1.4 }}>{status}</div>
+      <div id="scanner-region" style={{ width:"100%", maxWidth:320, borderRadius:14, overflow:"hidden", background:"#111", minHeight:180 }} />
+      <div style={{ color:"rgba(255,255,255,0.6)", fontSize:11, marginTop:10, textAlign:"center" }}>
+        El código de barras debe estar bien iluminado y plano
+      </div>
+      <button onClick={onClose} style={{ marginTop:18, padding:"12px 32px", borderRadius:12, border:"none", background:"#fff", color:"#2C2528", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Cancelar</button>
     </div>
   );
 }
