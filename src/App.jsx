@@ -76,8 +76,8 @@ const LIB = {
     { n:"Omelette de claras con tomate (muy ligero) · café", k:200, p:"P_HUEVO", r:null },
   ],
   cam: [
-    { n:"Fitmingo + 500 ml leche deslactosada", k:390, p:"P_SHAKE", r:null },
-    { n:"Smoothie: Fitmingo + 500 ml leche + fresas", k:440, p:"P_SHAKE", r:"smoothie-iso" },
+    { n:"Fitmingo + 500 ml leche deslactosada", k:380, p:"P_SHAKE", r:null },
+    { n:"Smoothie: Fitmingo + 500 ml leche + fresas", k:430, p:"P_SHAKE", r:"smoothie-iso" },
     { n:"1 papilla Mongui + yogur griego natural", k:170, p:"P_LACTEO", r:null },
     { n:"1 pera + queso panela en cubos", k:160, p:"P_LACTEO", r:null },
     { n:"Yogur griego + fruta", k:150, p:"P_LACTEO", r:null },
@@ -112,8 +112,8 @@ const LIB = {
     { n:"Pechuga a la plancha · ensalada grande (sin carbohidrato)", k:320, p:"P_POLLO", r:null },
   ],
   cpm: [
-    { n:"Fitmingo + 500 ml leche deslactosada", k:390, p:"P_SHAKE", r:null },
-    { n:"Smoothie: Fitmingo + 500 ml leche + fresas", k:440, p:"P_SHAKE", r:"smoothie-iso" },
+    { n:"Fitmingo + 500 ml leche deslactosada", k:380, p:"P_SHAKE", r:null },
+    { n:"Smoothie: Fitmingo + 500 ml leche + fresas", k:430, p:"P_SHAKE", r:"smoothie-iso" },
     { n:"Fitmingo con agua (shake ligero, sin leche)", k:140, p:"P_SHAKE", r:null },
     { n:"Yogur griego + granola sin azúcar", k:175, p:"P_LACTEO", r:null },
     { n:"Yogur griego + mango", k:170, p:"P_LACTEO", r:null },
@@ -130,7 +130,7 @@ const LIB = {
   ],
   cen: [
     { n:"★ ½ arroz blanco + atún + aguacate + tomate", k:310, p:"P_MAR", r:"arroz-atun" },
-    { n:"Smoothie de proteína: Fitmingo + 500 ml leche + fresas", k:420, p:"P_SHAKE", r:"smoothie-iso" },
+    { n:"Smoothie de proteína: Fitmingo + 500 ml leche + fresas", k:430, p:"P_SHAKE", r:"smoothie-iso" },
     { n:"Tostadas + ½ aguacate + tomate + cottage", k:220, p:"P_LACTEO", r:null },
     { n:"Coctel de camarón ligero (camarón, tomate, aguacate, limón)", k:220, p:"P_MAR", r:"coctel" },
     { n:"Yogur + arándanos + granola sin azúcar", k:210, p:"P_LACTEO", r:null },
@@ -324,7 +324,7 @@ const FOODDB = [
   { kw:["papaya"], k:60 }, { kw:["sandía","sandia"], k:50 }, { kw:["melón","melon"], k:60 }, { kw:["piña","pina"], k:80 }, { kw:["uvas","uva"], k:90 }, { kw:["durazno"], k:60 }, { kw:["arándanos","arandanos"], k:60 }, { kw:["mandarina"], k:45 }, { kw:["kiwi"], k:45 },
   { kw:["proteína","proteina","scoop","fitmingo","isopure"], k:140 },
   { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 }, { kw:["calabacita","calabaza"], k:25 }, { kw:["brócoli","brocoli"], k:30 }, { kw:["pepino"], k:15 }, { kw:["lechuga"], k:10 }, { kw:["jícama","jicama"], k:35 }, { kw:["nopal","nopales"], k:15 }, { kw:["champiñones","champiñon","hongos"], k:20 }, { kw:["zanahoria"], k:35 }, { kw:["papa cambray","papa","papas cambray"], k:110 },
-  { kw:["leche deslactosada","500 ml leche","leche"], k:200 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
+  { kw:["leche deslactosada","500 ml leche","leche"], k:240 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
   { kw:["pasta","espagueti"], k:300 }, { kw:["ensalada"], k:150 }, { kw:["sopa","caldo"], k:180 },
   { kw:["pechuga","pollo"], k:200 }, { kw:["carne","bistec","res","arrachera"], k:250 },
   { kw:["camarón","camaron","camarones"], k:120 }, { kw:["salmón","salmon","atún","atun","pescado"], k:180 },
@@ -345,7 +345,7 @@ const FOODDB = [
   { kw:["tamal"], k:250 }, { kw:["menudo"], k:280 },
   { kw:["bolillo","telera"], k:180 }, { kw:["pan tostado","rebanada de pan","pan"], k:80 },
   { kw:["agua de melón","agua de melon","agua de melon natural"], k:90 }, { kw:["agua de horchata","horchata"], k:150 }, { kw:["agua de jamaica","jamaica"], k:90 },
-  { kw:["pechuga empanizada","pollo empanizado","milanesa de pollo empanizada","milanesa pollo"], k:288 }, { kw:["milanesa de res empanizada","milanesa de res","milanesa empanizada","milanesa"], k:265 }, { kw:["sopa de fideo","fideo","fideos"], k:180 }, { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["snack tajín","snack tajin","tajín","tajin"], k:36 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:460 }, { kw:["licuado de fresa","licuado de fresas"], k:400 }, { kw:["licuado de plátano","licuado de platano","licuado plátano","licuado platano"], k:305 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
+  { kw:["milanesas de pollo empanizadas","milanesas de pollo","pechuga empanizada","pollo empanizado","milanesa de pollo empanizada","milanesa de pollo","milanesa pollo"], k:232 }, { kw:["milanesas de res empanizadas","milanesas de res","milanesa de res empanizada","milanesa de res","milanesa empanizada","milanesa"], k:285 }, { kw:["arroz con leche"], k:284 }, { kw:["sopa de fideo","fideo","fideos"], k:180 }, { kw:["pan árabe","pan arabe","pan pita","pita"], k:150 }, { kw:["pepperoni","peperoni"], k:80 }, { kw:["snack tajín","snack tajin","tajín","tajin"], k:36 }, { kw:["papilla mongui","mongui"], k:50 }, { kw:["licuado de fresa con plátano","licuado de fresa con platano","licuado de fresa y plátano","licuado de fresa y platano"], k:545 }, { kw:["licuado de fresa","licuado de fresas"], k:440 }, { kw:["licuado de mango","licuado mango"], k:490 }, { kw:["licuado de plátano","licuado de platano","licuado plátano","licuado platano"], k:495 }, { kw:["licuado","smoothie"], k:200 }, { kw:["jumex de uva","jugo de uva jumex","jumex uva"], k:174 }, { kw:["jugo de manzana jumex","jugo manzana jumex","jumex de manzana","jugo de manzana","jumex"], k:121 }, { kw:["jugo de naranja natural","jugo de naranja"], k:90 }, { kw:["jugo de zanahoria natural","jugo de zanahoria"], k:80 }, { kw:["galleta breton","galletas breton","breton"], k:40 }, { kw:["galleta salada","galletas saladas","galleta de soda","cracker","crackers"], k:13 }, { kw:["jugo"], k:120 }, { kw:["tequila","mezcal"], k:100 }, { kw:["palomitas"], k:250 },
   { kw:["chicharrón de cerdo","chicharron de cerdo","chicharrón","chicharron"], k:174 }, { kw:["papas fritas de bolsa","sabritas","frituras"], k:280 },
   { kw:["flan","gelatina"], k:200 },
 ];
