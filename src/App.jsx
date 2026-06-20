@@ -538,7 +538,7 @@ export default function App() {
   const [savedSection, setSavedSection] = useState(null);
 
   // Sleep AM
-  const [prevBedtime, setPrevBedtime]   = useState("23:00");
+  const [prevBedtime, setPrevBedtime]   = useState(() => LS.get("ht_last_bed") || "23:00");
   const [firstWake, setFirstWake]       = useState("");
   const [backToBed, setBackToBed]       = useState("");   // hora en que volviste a dormirte
   const [actualWake, setActualWake]     = useState("");   // despertar final
@@ -620,7 +620,7 @@ export default function App() {
     // En el montaje inicial NO limpiamos (para no borrar lo cargado de localStorage)
     if (firstDateRun.current) { firstDateRun.current = false; return; }
     // Al CAMBIAR de día, limpiar campos para no arrastrar valores
-    setPrevBedtime("23:00");
+    setPrevBedtime(LS.get("ht_last_bed") || "23:00");
     setActualWake("");
     setFirstWake("");
     setBackToBed("");
@@ -737,6 +737,7 @@ export default function App() {
       }
       dur = (total / 60).toFixed(1);
     }
+    LS.set("ht_last_bed", prevBedtime);
     doSave("Sueno", ["AM", activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", firstWake||"", backToBed||""], "sleep_am", 2);
   };
 
