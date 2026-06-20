@@ -227,7 +227,7 @@ function getCurrentSection() {
   try {
     const params = new URLSearchParams(window.location.search);
     const s = params.get("seccion");
-    const valid = ["sleep_am","sleep_pm","food","habits","peso"];
+    const valid = ["sleep_am","sleep_pm","food","habits","bienestar"];
     if (s && valid.includes(s)) return s;
   } catch (_) {}
   const t = new Date().getHours() * 60 + new Date().getMinutes();
@@ -560,8 +560,11 @@ export default function App() {
   const [customValues, setCustomValues] = useState({});
   const [habitSaved, setHabitSaved]     = useState(false);
 
-  // Weight
+  // Weight + Bienestar
   const [weight, setWeight]             = useState("");
+  const [dolorEspalda, setDolorEspalda] = useState(null);  // null | "si" | "no"
+  const [momentoDolor, setMomentoDolor] = useState([]);    // ["mañana","tarde","noche"]
+  const [estres, setEstres]             = useState(null);  // null | "si" | "no"
 
   // Food (dynamic plan)
   const [activeDate, setActiveDate]     = useState(todayKey());
@@ -633,6 +636,9 @@ export default function App() {
       return cleared;
     });
     setWeight("");
+    setDolorEspalda(null);
+    setMomentoDolor([]);
+    setEstres(null);
     setSavedSection(null);
     setHabitSaved(false);
     setDayClosed(false);
@@ -766,9 +772,12 @@ export default function App() {
     setSaving(false);
   };
 
-  const saveWeight = () => {
-    if (!weight) { alert("Ingresa tu peso"); return; }
-    doSave("Sueno", ["Peso", activeDate, "", "", "", "", "", "", weight, "", ""], "peso", 2);
+  const saveBienestar = () => {
+    if (!weight && dolorEspalda === null && estres === null) {
+      alert("Ingresa al menos un dato"); return;
+    }
+    const momento = momentoDolor.length > 0 ? momentoDolor.join(", ") : "";
+    doSave("Bienestar", [activeDate, weight||"", dolorEspalda||"", momento, estres||""], "peso");
   };
 
   const closeDay = async () => {
@@ -917,7 +926,7 @@ export default function App() {
     { id:"sleep_pm", icon:"😴", label:"Sueño PM" },
     { id:"food",     icon:"🥗", label:"Alimentación" },
     { id:"habits",   icon:"💧", label:"Hábitos" },
-    { id:"peso",     icon:"⚖️", label:"Peso" },
+    { id:"bienestar", icon:"🌿", label:"Bienestar" },
   ];
 
   const card = { background:"#fff", border:`1px solid ${NEUTRAL2}`, borderRadius:14 };
@@ -1535,25 +1544,71 @@ export default function App() {
         )}
 
         {/* ── PESO ── */}
-        {section === "peso" && (
-          <div style={{ ...card, padding:20 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-              <span style={{ fontSize:24 }}>⚖️</span>
-              <div>
-                <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Peso</div>
-                <div style={{ fontSize:12, color:MUTED }}>Registro semanal</div>
-              </div>
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-              <div>
-                <div style={{ fontSize:12, color:MUTED, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.08em" }}>Peso de hoy</div>
-                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <input type="number" value={weight} onChange={e=>setWeight(e.target.value)} placeholder="63.0" step="0.1" style={{ fontSize:32, fontWeight:800, border:"none", background:NEUTRAL, borderRadius:12, padding:"12px 16px", color:TEXT, width:"140px", fontFamily:"inherit" }} />
-                  <span style={{ fontSize:18, color:MUTED, fontWeight:600 }}>kg</span>
+        {section === "bienestar" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+            {/* PESO */}
+            <div style={{ ...card, padding:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <span style={{ fontSize:24 }}>⚖️</span>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Peso</div>
+                  <div style={{ fontSize:12, color:MUTED }}>Registro diario</div>
                 </div>
               </div>
-              <SaveBtn onClick={saveWeight} saving={saving} saved={savedSection==="peso"} label="⚖️ Guardar peso" />
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <input type="number" value={weight} onChange={e=>setWeight(e.target.value)} placeholder="63.0" step="0.1" style={{ fontSize:32, fontWeight:800, border:"none", background:NEUTRAL, borderRadius:12, padding:"12px 16px", color:TEXT, width:"140px", fontFamily:"inherit" }} />
+                <span style={{ fontSize:18, color:MUTED, fontWeight:600 }}>kg</span>
+              </div>
             </div>
+
+            {/* DOLOR DE ESPALDA */}
+            <div style={{ ...card, padding:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <span style={{ fontSize:24 }}>🔴</span>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Dolor de espalda</div>
+                  <div style={{ fontSize:12, color:MUTED }}>¿Tuviste dolor hoy?</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                {[["si","Sí"],["no","No"]].map(([val,label]) => (
+                  <button key={val} onClick={() => { setDolorEspalda(val); if(val==="no") setMomentoDolor([]); }} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:15, fontWeight:700, background:dolorEspalda===val?(val==="si"?"#C0392B":VINO):(val==="si"?"#FDEAEA":NEUTRAL), color:dolorEspalda===val?"#fff":(val==="si"?"#C0392B":MUTED) }}>{label}</button>
+                ))}
+              </div>
+
+              {dolorEspalda === "si" && (
+                <div>
+                  <div style={{ fontSize:12, color:MUTED, fontWeight:600, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.08em" }}>¿En qué momento? (puedes elegir varios)</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    {["Mañana","Tarde","Noche"].map(m => {
+                      const active = momentoDolor.includes(m);
+                      return (
+                        <button key={m} onClick={() => setMomentoDolor(prev => active ? prev.filter(x=>x!==m) : [...prev, m])} style={{ flex:1, padding:"10px 6px", borderRadius:10, border:`1.5px solid ${active?VINO:NEUTRAL2}`, cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:600, background:active?VINO:"#fff", color:active?"#fff":MUTED }}>{m}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ESTRÉS */}
+            <div style={{ ...card, padding:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <span style={{ fontSize:24 }}>🧠</span>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Estrés</div>
+                  <div style={{ fontSize:12, color:MUTED }}>¿Sentiste estrés hoy?</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                {[["si","Sí"],["no","No"]].map(([val,label]) => (
+                  <button key={val} onClick={() => setEstres(val)} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:15, fontWeight:700, background:estres===val?(val==="si"?"#E67E22":VINO):(val==="si"?"#FEF0E6":NEUTRAL), color:estres===val?"#fff":(val==="si"?"#E67E22":MUTED) }}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            <SaveBtn onClick={saveBienestar} saving={saving} saved={savedSection==="peso"} label="🌿 Guardar bienestar del día" />
           </div>
         )}
 
