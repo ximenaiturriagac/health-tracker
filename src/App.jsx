@@ -737,7 +737,7 @@ export default function App() {
       }
       dur = (total / 60).toFixed(1);
     }
-    doSave("Sueno", ["AM", activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", "", firstWake||"", backToBed||""], "sleep_am", 2);
+    doSave("Sueno", ["AM", activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", firstWake||"", backToBed||""], "sleep_am", 2);
   };
 
   const saveSleepPM = async () => {
@@ -747,7 +747,7 @@ export default function App() {
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
     setSaving(true);
     try {
-      await upsertByDate("Sueno", ["PM", activeDate, bedtime, "", optimal, cycles, "", "", "", "", ""], token, 2);
+      await upsertByDate("Sueno", ["PM", activeDate, bedtime, "", optimal, cycles, "", "", "", ""], token, 2);
       if (optimal) await upsertByDate("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
     } catch(e) {
