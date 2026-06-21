@@ -616,29 +616,8 @@ export default function App() {
 
   const firstDateRun = useRef(true);
   useEffect(() => {
+    if (firstDateRun.current) { firstDateRun.current = false; }
     loadDay(activeDate);
-    // En el montaje inicial NO limpiamos (para no borrar lo cargado de localStorage)
-    if (firstDateRun.current) { firstDateRun.current = false; return; }
-    // Al CAMBIAR de día, limpiar campos para no arrastrar valores
-    setPrevBedtime(LS.get("ht_last_bed") || "23:00");
-    setActualWake("");
-    setFirstWake("");
-    setBackToBed("");
-    setFirstWake("");
-    setSleepQuality(null);
-    setBedtime("23:00");
-    setSelectedWake(null);
-    setAgua(0);
-    setLectura(0);
-    setCustomValues(prev => {
-      const cleared = {};
-      Object.keys(prev).forEach(k => { cleared[k] = 0; });
-      return cleared;
-    });
-    setWeight("");
-    setDolorEspalda(null);
-    setMomentoDolor([]);
-    setEstres(null);
     setSavedSection(null);
     setHabitSaved(false);
     setDayClosed(false);
@@ -648,6 +627,51 @@ export default function App() {
     const saved = LS.get(`ht_day:${d}`);
     setLog(saved || {});
     setDayClosed(false);
+
+    // Sueño AM
+    const am = LS.get(`ht_sleep_am:${d}`);
+    if (am) {
+      setPrevBedtime(am.prevBedtime || LS.get("ht_last_bed") || "23:00");
+      setFirstWake(am.firstWake || "");
+      setBackToBed(am.backToBed || "");
+      setActualWake(am.actualWake || "");
+      setSleepQuality(am.sleepQuality || null);
+    } else {
+      setPrevBedtime(LS.get("ht_last_bed") || "23:00");
+      setFirstWake(""); setBackToBed(""); setActualWake(""); setSleepQuality(null);
+    }
+
+    // Sueño PM
+    const pm = LS.get(`ht_sleep_pm:${d}`);
+    if (pm) {
+      setBedtime(pm.bedtime || LS.get("ht_last_bed") || "23:00");
+      setSelectedWake(pm.selectedWake || null);
+    } else {
+      setBedtime(LS.get("ht_last_bed") || "23:00");
+      setSelectedWake(null);
+    }
+
+    // Hábitos
+    const hab = LS.get(`ht_habits:${d}`);
+    if (hab) {
+      setAgua(hab.agua ?? 0);
+      setLectura(hab.lectura ?? 0);
+      setCustomValues(hab.customValues || {});
+    } else {
+      setAgua(0); setLectura(0);
+      setCustomValues(prev => { const c={}; Object.keys(prev).forEach(k=>{c[k]=0;}); return c; });
+    }
+
+    // Bienestar
+    const bien = LS.get(`ht_bienestar:${d}`);
+    if (bien) {
+      setWeight(bien.weight || "");
+      setDolorEspalda(bien.dolorEspalda || null);
+      setMomentoDolor(bien.momentoDolor || []);
+      setEstres(bien.estres || null);
+    } else {
+      setWeight(""); setDolorEspalda(null); setMomentoDolor([]); setEstres(null);
+    }
   }
 
   function persistLog(nl) {
@@ -738,6 +762,7 @@ export default function App() {
       dur = (total / 60).toFixed(1);
     }
     LS.set("ht_last_bed", prevBedtime);
+    LS.set(`ht_sleep_am:${activeDate}`, { prevBedtime, firstWake, backToBed, actualWake, sleepQuality });
     doSave("Sueno", ["AM", activeDate, prevBedtime, finalWake, "", "", dur, sleepQuality||"", firstWake||"", backToBed||""], "sleep_am", 2);
   };
 
@@ -748,6 +773,7 @@ export default function App() {
     const cycles  = wakeOptions?.find(o => o.label===optimal)?.cycles || "";
     setSaving(true);
     try {
+      LS.set(`ht_sleep_pm:${activeDate}`, { bedtime, selectedWake: optimal });
       await upsertByDate("Sueno", ["PM", activeDate, bedtime, "", optimal, cycles, "", "", "", ""], token, 2);
       if (optimal) await upsertByDate("AlarmaAlexa", [activeDate, optimal], token);
       setSavedSection("sleep_pm"); setTimeout(() => setSavedSection(null), 3000);
@@ -764,6 +790,7 @@ export default function App() {
     setSaving(true);
     try {
       const customVals = customHabits.map(h => customValues[h.name]||0);
+      LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
       await upsertByDate("Habitos", [activeDate, agua, lectura, ...customVals], token);
       setHabitSaved(true); setTimeout(() => setHabitSaved(false), 3000);
     } catch(e) {
@@ -778,6 +805,7 @@ export default function App() {
       alert("Ingresa al menos un dato"); return;
     }
     const momento = momentoDolor.length > 0 ? momentoDolor.join(", ") : "";
+    LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
     doSave("Bienestar", [activeDate, weight||"", dolorEspalda||"", momento, estres||""], "peso");
   };
 
