@@ -325,7 +325,7 @@ const FOODDB = [
   { kw:["proteína","proteina","scoop","fitmingo","isopure"], k:140 },
   { kw:["espinaca"], k:10 }, { kw:["jitomate","tomate"], k:20 }, { kw:["calabacita","calabaza"], k:25 }, { kw:["brócoli","brocoli"], k:30 }, { kw:["pepino"], k:15 }, { kw:["lechuga"], k:10 }, { kw:["jícama","jicama"], k:35 }, { kw:["nopal","nopales"], k:15 }, { kw:["champiñones","champiñon","hongos"], k:20 }, { kw:["zanahoria"], k:35 }, { kw:["papa cambray","papa","papas cambray"], k:110 },
   { kw:["leche deslactosada","500 ml leche","leche"], k:240 }, { kw:["arroz"], k:200 }, { kw:["frijoles","frijol"], k:130 },
-  { kw:["pasta","espagueti"], k:300 }, { kw:["ensalada"], k:150 }, { kw:["sopa","caldo"], k:180 },
+  { kw:["pasta","espagueti"], k:300 }, { kw:["ensalada"], k:150 }, { kw:["caldo tlalpeño","caldo tlalpeno","tlalpeño","tlalpeno"], k:320 }, { kw:["sopa","caldo"], k:180 },
   { kw:["pechuga","pollo"], k:200 }, { kw:["carne","bistec","res","arrachera"], k:250 },
   { kw:["camarón","camaron","camarones"], k:120 }, { kw:["salmón","salmon","atún","atun","pescado"], k:180 },
   { kw:["aguacate","guacamole"], k:120 }, { kw:["avena"], k:150 },
@@ -548,6 +548,40 @@ export default function App() {
   const [selectedWake, setSelectedWake] = useState(null);
   // Sync AM→PM
   useEffect(() => { setBedtime(prevBedtime); }, [prevBedtime]);
+
+  // Auto-guardar sueño AM en localStorage al cambiar cualquier campo
+  const firstSleepRun = useRef(true);
+  useEffect(() => {
+    if (firstSleepRun.current) { firstSleepRun.current = false; return; }
+    if (prevBedtime || firstWake || backToBed || actualWake || sleepQuality) {
+      LS.set(`ht_sleep_am:${activeDate}`, { prevBedtime, firstWake, backToBed, actualWake, sleepQuality });
+    }
+  }, [prevBedtime, firstWake, backToBed, actualWake, sleepQuality]);
+
+  // Auto-guardar sueño PM
+  const firstPMRun = useRef(true);
+  useEffect(() => {
+    if (firstPMRun.current) { firstPMRun.current = false; return; }
+    if (bedtime || selectedWake) {
+      LS.set(`ht_sleep_pm:${activeDate}`, { bedtime, selectedWake });
+    }
+  }, [bedtime, selectedWake]);
+
+  // Auto-guardar hábitos
+  const firstHabitsRun = useRef(true);
+  useEffect(() => {
+    if (firstHabitsRun.current) { firstHabitsRun.current = false; return; }
+    LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
+  }, [agua, lectura, customValues]);
+
+  // Auto-guardar bienestar
+  const firstBienRun = useRef(true);
+  useEffect(() => {
+    if (firstBienRun.current) { firstBienRun.current = false; return; }
+    if (weight || dolorEspalda || estres) {
+      LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
+    }
+  }, [weight, dolorEspalda, momentoDolor, estres]);
 
   // Habits
   const [agua, setAgua]                 = useState(0);
