@@ -549,40 +549,6 @@ export default function App() {
   // Sync AM→PM
   useEffect(() => { setBedtime(prevBedtime); }, [prevBedtime]);
 
-  // Auto-guardar sueño AM en localStorage al cambiar cualquier campo
-  const firstSleepRun = useRef(true);
-  useEffect(() => {
-    if (firstSleepRun.current) { firstSleepRun.current = false; return; }
-    if (prevBedtime || firstWake || backToBed || actualWake || sleepQuality) {
-      LS.set(`ht_sleep_am:${activeDate}`, { prevBedtime, firstWake, backToBed, actualWake, sleepQuality });
-    }
-  }, [prevBedtime, firstWake, backToBed, actualWake, sleepQuality]);
-
-  // Auto-guardar sueño PM
-  const firstPMRun = useRef(true);
-  useEffect(() => {
-    if (firstPMRun.current) { firstPMRun.current = false; return; }
-    if (bedtime || selectedWake) {
-      LS.set(`ht_sleep_pm:${activeDate}`, { bedtime, selectedWake });
-    }
-  }, [bedtime, selectedWake]);
-
-  // Auto-guardar hábitos
-  const firstHabitsRun = useRef(true);
-  useEffect(() => {
-    if (firstHabitsRun.current) { firstHabitsRun.current = false; return; }
-    LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
-  }, [agua, lectura, customValues]);
-
-  // Auto-guardar bienestar
-  const firstBienRun = useRef(true);
-  useEffect(() => {
-    if (firstBienRun.current) { firstBienRun.current = false; return; }
-    if (weight || dolorEspalda || estres) {
-      LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
-    }
-  }, [weight, dolorEspalda, momentoDolor, estres]);
-
   // Habits
   const [agua, setAgua]                 = useState(0);
   const [lectura, setLectura]           = useState(0);
@@ -722,6 +688,37 @@ export default function App() {
   function clearMeal(key) {
     const nl = { ...log }; delete nl[key]; setLog(nl); persistLog(nl);
   }
+
+  // ── Auto-guardado en localStorage (sin esperar al botón) ──
+  const firstSleepRun = useRef(true);
+  useEffect(() => {
+    if (firstSleepRun.current) { firstSleepRun.current = false; return; }
+    if (prevBedtime || firstWake || backToBed || actualWake || sleepQuality) {
+      LS.set(`ht_sleep_am:${activeDate}`, { prevBedtime, firstWake, backToBed, actualWake, sleepQuality });
+    }
+  }, [prevBedtime, firstWake, backToBed, actualWake, sleepQuality]);
+
+  const firstPMRun = useRef(true);
+  useEffect(() => {
+    if (firstPMRun.current) { firstPMRun.current = false; return; }
+    if (bedtime || selectedWake) {
+      LS.set(`ht_sleep_pm:${activeDate}`, { bedtime, selectedWake });
+    }
+  }, [bedtime, selectedWake]);
+
+  const firstHabitsRun = useRef(true);
+  useEffect(() => {
+    if (firstHabitsRun.current) { firstHabitsRun.current = false; return; }
+    LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
+  }, [agua, lectura, customValues]);
+
+  const firstBienRun = useRef(true);
+  useEffect(() => {
+    if (firstBienRun.current) { firstBienRun.current = false; return; }
+    if (weight || dolorEspalda || estres) {
+      LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
+    }
+  }, [weight, dolorEspalda, momentoDolor, estres]);
 
   // ── Auth ──
   const handleAuth = useCallback((silent = false) => {
