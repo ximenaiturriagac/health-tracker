@@ -559,6 +559,12 @@ export default function App() {
   const [newHabitUnit, setNewHabitUnit] = useState("min");
   const [customValues, setCustomValues] = useState({});
   const [habitSaved, setHabitSaved]     = useState(false);
+  // Suplementos (desde 2026-06-29)
+  const [suppB12, setSuppB12]           = useState(false);
+  const [suppMag, setSuppMag]           = useState(false);
+  const [suppD3, setSuppD3]             = useState(false);
+  const [suppOmega1, setSuppOmega1]     = useState(false); // comida 2pm
+  const [suppOmega2, setSuppOmega2]     = useState(false); // noche
 
   // Weight + Bienestar
   const [weight, setWeight]             = useState("");
@@ -662,8 +668,18 @@ export default function App() {
       setCustomValues(prev => { const c={}; Object.keys(prev).forEach(k=>{c[k]=0;}); return c; });
     }
 
-    // Bienestar
-    const bien = LS.get(`ht_bienestar:${d}`);
+    // Suplementos
+    const supp = LS.get(`ht_supp:${d}`);
+    if (supp) {
+      setSuppB12(supp.b12 || false);
+      setSuppMag(supp.mag || false);
+      setSuppD3(supp.d3 || false);
+      setSuppOmega1(supp.omega1 || false);
+      setSuppOmega2(supp.omega2 || false);
+    } else {
+      setSuppB12(false); setSuppMag(false); setSuppD3(false);
+      setSuppOmega1(false); setSuppOmega2(false);
+    }
     if (bien) {
       setWeight(bien.weight || "");
       setDolorEspalda(bien.dolorEspalda || null);
@@ -673,7 +689,6 @@ export default function App() {
       setWeight(""); setDolorEspalda(null); setMomentoDolor([]); setEstres(null);
     }
   }
-
   function persistLog(nl) {
     LS.set(`ht_day:${activeDate}`, nl);
     const consumed = Object.values(nl).reduce((s,m) => s+(m?.kcal||0), 0);
@@ -719,6 +734,12 @@ export default function App() {
       LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
     }
   }, [weight, dolorEspalda, momentoDolor, estres]);
+
+  const firstSuppRun = useRef(true);
+  useEffect(() => {
+    if (firstSuppRun.current) { firstSuppRun.current = false; return; }
+    LS.set(`ht_supp:${activeDate}`, { b12:suppB12, mag:suppMag, d3:suppD3, omega1:suppOmega1, omega2:suppOmega2 });
+  }, [suppB12, suppMag, suppD3, suppOmega1, suppOmega2]);
 
   // ── Auth ──
   const handleAuth = useCallback((silent = false) => {
@@ -822,7 +843,12 @@ export default function App() {
     try {
       const customVals = customHabits.map(h => customValues[h.name]||0);
       LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
-      await upsertByDate("Habitos", [activeDate, agua, lectura, ...customVals], token);
+      LS.set(`ht_supp:${activeDate}`, { b12:suppB12, mag:suppMag, d3:suppD3, omega1:suppOmega1, omega2:suppOmega2 });
+      await upsertByDate("Habitos", [
+        activeDate, agua, lectura, ...customVals,
+        suppB12?"✓":"", suppMag?"✓":"", suppD3?"✓":"",
+        suppOmega1?"✓":"", suppOmega2?"✓":"",
+      ], token);
       setHabitSaved(true); setTimeout(() => setHabitSaved(false), 3000);
     } catch(e) {
       if (e.message.includes("401") || e.message.includes("403")) { setToken(null); localStorage.removeItem("ht_token"); handleAuth(); }
@@ -1545,61 +1571,117 @@ export default function App() {
 
         {/* ── HÁBITOS ── */}
         {section === "habits" && (
-          <div style={{ ...card, padding:20 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
-              <span style={{ fontSize:24 }}>💧</span>
-              <div>
-                <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Hábitos del día</div>
-                <div style={{ fontSize:12, color:MUTED }}>Agua · Lectura</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+
+            {/* HÁBITOS */}
+            <div style={{ ...card, padding:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                <span style={{ fontSize:24 }}>💧</span>
+                <div>
+                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Hábitos del día</div>
+                  <div style={{ fontSize:12, color:MUTED }}>Agua · Lectura</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                {[
+                  { val:agua, set:setAgua, icon:"💧", label:"Agua", meta:8, step:1, unit:"vasos", color:VINO },
+                  { val:lectura, set:setLectura, icon:"📖", label:"Lectura", meta:20, step:5, unit:"min", color:VINO2 },
+                  ...customHabits.map(h => ({ val:customValues[h.name]||0, set:(v)=>{ setCustomValues(p=>{ const n={...p,[h.name]:v}; LS.set("ht_custom_values",n); return n; }); }, icon:"⭐", label:h.name, meta:h.meta, step:h.unit==="min"?5:1, unit:h.unit, color:MUTED }))
+                ].map(h => (
+                  <div key={h.label}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                      <div>
+                        <div style={{ fontSize:14, fontWeight:600, color:TEXT }}>{h.icon} {h.label}</div>
+                        <div style={{ fontSize:11, color:MUTED }}>Meta: {h.meta} {h.unit}</div>
+                      </div>
+                      <Stepper value={h.val} onChange={h.set} min={0} max={h.meta*3} step={h.step} unit={h.unit} />
+                    </div>
+                    <div style={{ height:6, background:NEUTRAL, borderRadius:3 }}>
+                      <div style={{ height:"100%", borderRadius:3, background:h.color, width:`${Math.min(100,(h.val/h.meta)*100)}%`, transition:"width 0.3s" }} />
+                    </div>
+                  </div>
+                ))}
+
+                {!showAddHabit ? (
+                  <button onClick={() => setShowAddHabit(true)} style={{ border:`1.5px dashed ${NEUTRAL2}`, borderRadius:12, padding:"12px", textAlign:"center", fontSize:13, fontWeight:600, color:VINO, cursor:"pointer", background:"transparent", fontFamily:"inherit" }}>
+                    + Agregar hábito nuevo
+                  </button>
+                ) : (
+                  <div style={{ background:NEUTRAL, borderRadius:14, padding:16, display:"flex", flexDirection:"column", gap:10 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>Nuevo hábito</div>
+                    <input placeholder="Nombre (ej. Meditación)" value={newHabitName} onChange={e=>setNewHabitName(e.target.value)} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }} />
+                    <div style={{ display:"flex", gap:8 }}>
+                      <input placeholder="Meta" type="number" value={newHabitMeta} onChange={e=>setNewHabitMeta(e.target.value)} style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }} />
+                      <select value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }}>
+                        <option value="min">minutos</option>
+                        <option value="veces">veces</option>
+                        <option value="vasos">vasos</option>
+                      </select>
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button onClick={addHabit} style={{ flex:1, padding:"10px", borderRadius:10, border:"none", background:VINO, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✓ Agregar</button>
+                      <button onClick={() => setShowAddHabit(false)} style={{ flex:1, padding:"10px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, background:"#fff", color:MUTED, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-              {[
-                { val:agua, set:setAgua, icon:"💧", label:"Agua", meta:8, step:1, unit:"vasos", color:VINO },
-                { val:lectura, set:setLectura, icon:"📖", label:"Lectura", meta:20, step:5, unit:"min", color:VINO2 },
-                ...customHabits.map(h => ({ val:customValues[h.name]||0, set:(v)=>{ setCustomValues(p=>{ const n={...p,[h.name]:v}; LS.set("ht_custom_values",n); return n; }); }, icon:"⭐", label:h.name, meta:h.meta, step:h.unit==="min"?5:1, unit:h.unit, color:MUTED }))
-              ].map(h => (
-                <div key={h.label}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+
+            {/* SUPLEMENTOS */}
+            {(() => {
+              const SUPP_START = new Date("2026-06-28T12:00:00"); // 29 jun = día 1 (no D3)
+              const today = new Date(activeDate + "T12:00:00");
+              const diffDays = Math.floor((today - SUPP_START) / 86400000);
+              const showSupp = diffDays >= 1; // desde el 29 jun
+              const d3Toca = diffDays % 2 === 0; // 29=día1=no(impar desde 0), 30=día2=sí...
+              // 29 jun: diffDays=1 → 1%2=1 → no toca ✓
+              // 30 jun: diffDays=2 → 2%2=0 → sí toca ✓
+              if (!showSupp) return (
+                <div style={{ ...card, padding:16, textAlign:"center", color:MUTED, fontSize:13 }}>
+                  Los suplementos empiezan el 29 de junio 💊
+                </div>
+              );
+
+              const suppList = [
+                { key:"b12",    val:suppB12,    set:setSuppB12,    icon:"💊", label:"B12 Bioganic sublingual", momento:"Mañana en ayunas", detail:"1 porción bajo la lengua 60 seg", alerta:null },
+                { key:"mag",    val:suppMag,    set:setSuppMag,    icon:"💊", label:"Magnesio citrato 400mg",  momento:"Mañana en ayunas", detail:"1 cápsula",                       alerta:null },
+                { key:"d3",     val:suppD3,     set:setSuppD3,     icon:"💊", label:"Seima D3+K2 gotas",       momento:"Mañana en ayunas", detail:"6 gotas · día sí día no",         alerta: d3Toca ? "✅ Hoy toca" : "⏭️ Hoy NO toca — descansa" },
+                { key:"omega1", val:suppOmega1, set:setSuppOmega1, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Comida — 2pm",      detail:"2 cápsulas",                      alerta:null },
+                { key:"omega2", val:suppOmega2, set:setSuppOmega2, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Noche con cena",    detail:"2 cápsulas",                      alerta:null },
+              ];
+
+              return (
+                <div style={{ ...card, padding:20 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                    <span style={{ fontSize:24 }}>💊</span>
                     <div>
-                      <div style={{ fontSize:14, fontWeight:600, color:TEXT }}>{h.icon} {h.label}</div>
-                      <div style={{ fontSize:11, color:MUTED }}>Meta: {h.meta} {h.unit}</div>
+                      <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Suplementos</div>
+                      <div style={{ fontSize:12, color:MUTED }}>Marca los que tomaste hoy</div>
                     </div>
-                    <Stepper value={h.val} onChange={h.set} min={0} max={h.meta*3} step={h.step} unit={h.unit} />
                   </div>
-                  <div style={{ height:6, background:NEUTRAL, borderRadius:3 }}>
-                    <div style={{ height:"100%", borderRadius:3, background:h.color, width:`${Math.min(100,(h.val/h.meta)*100)}%`, transition:"width 0.3s" }} />
-                  </div>
-                </div>
-              ))}
-
-              {!showAddHabit ? (
-                <button onClick={() => setShowAddHabit(true)} style={{ border:`1.5px dashed ${NEUTRAL2}`, borderRadius:12, padding:"12px", textAlign:"center", fontSize:13, fontWeight:600, color:VINO, cursor:"pointer", background:"transparent", fontFamily:"inherit" }}>
-                  + Agregar hábito nuevo
-                </button>
-              ) : (
-                <div style={{ background:NEUTRAL, borderRadius:14, padding:16, display:"flex", flexDirection:"column", gap:10 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:TEXT }}>Nuevo hábito</div>
-                  <input placeholder="Nombre (ej. Meditación)" value={newHabitName} onChange={e=>setNewHabitName(e.target.value)} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }} />
-                  <div style={{ display:"flex", gap:8 }}>
-                    <input placeholder="Meta" type="number" value={newHabitMeta} onChange={e=>setNewHabitMeta(e.target.value)} style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }} />
-                    <select value={newHabitUnit} onChange={e=>setNewHabitUnit(e.target.value)} style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, fontSize:13, fontFamily:"inherit", background:"#fff", color:TEXT }}>
-                      <option value="min">minutos</option>
-                      <option value="veces">veces</option>
-                      <option value="vasos">vasos</option>
-                    </select>
-                  </div>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <button onClick={addHabit} style={{ flex:1, padding:"10px", borderRadius:10, border:"none", background:VINO, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>✓ Agregar</button>
-                    <button onClick={() => setShowAddHabit(false)} style={{ flex:1, padding:"10px", borderRadius:10, border:`1px solid ${NEUTRAL2}`, background:"#fff", color:MUTED, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancelar</button>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {suppList.map(s => (
+                      <div key={s.key} onClick={() => { if(s.key==="d3" && !d3Toca) return; s.set(!s.val); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, background:s.val?"#F0FFF4":s.key==="d3"&&!d3Toca?"#F5F5F5":NEUTRAL, border:`1.5px solid ${s.val?"#52B788":s.key==="d3"&&!d3Toca?NEUTRAL2:NEUTRAL2}`, cursor:s.key==="d3"&&!d3Toca?"default":"pointer" }}>
+                        <div style={{ width:24, height:24, borderRadius:6, border:`2px solid ${s.val?"#52B788":NEUTRAL2}`, background:s.val?"#52B788":"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:14 }}>
+                          {s.val ? "✓" : ""}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:s.key==="d3"&&!d3Toca?MUTED:TEXT }}>{s.icon} {s.label}</div>
+                          <div style={{ fontSize:11, color:MUTED, marginTop:1 }}>{s.momento} · {s.detail}</div>
+                          {s.alerta && (
+                            <div style={{ fontSize:11, fontWeight:700, color:d3Toca?"#2D6A4F":"#E67E22", marginTop:3 }}>{s.alerta}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
+              );
+            })()}
 
-              <button onClick={saveHabits} disabled={saving} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", cursor:"pointer", background:habitSaved?"#52B788":VINO, color:"#fff", fontSize:15, fontWeight:700, fontFamily:"inherit", opacity:saving?0.7:1 }}>
-                {saving?"⏳ Guardando...":habitSaved?"✓ Guardado en Sheets":"💾 Guardar hábitos"}
-              </button>
-            </div>
+            <button onClick={saveHabits} disabled={saving} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", cursor:"pointer", background:habitSaved?"#52B788":VINO, color:"#fff", fontSize:15, fontWeight:700, fontFamily:"inherit", opacity:saving?0.7:1 }}>
+              {saving?"⏳ Guardando...":habitSaved?"✓ Guardado en Sheets":"💾 Guardar hábitos y suplementos"}
+            </button>
           </div>
         )}
 
