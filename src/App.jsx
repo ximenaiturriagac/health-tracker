@@ -315,7 +315,7 @@ const FOODDB = [
   { kw:["chilaquiles"], k:400 }, { kw:["pozole"], k:300 }, { kw:["tostada"], k:130 },
   { kw:["pizza"], k:285 }, { kw:["hamburguesa"], k:500 }, { kw:["hot dog costco","hot dog de costco"], k:570 }, { kw:["hot dog","hotdog"], k:270 }, { kw:["waffle de avena","waffles de avena"], k:120 }, { kw:["waffle","waffles"], k:220 }, { kw:["sandwich","sándwich"], k:350 },
   { kw:["café con leche","cafe con leche"], k:80 }, { kw:["latte","capuchino"], k:130 },
-  { kw:["café","cafe","té","te"], k:5 }, { kw:["sidral mundet","refresco de manzana mundet","refresco mundet","mundet"], k:71 }, { kw:["refresco","coca"], k:150 },
+  { kw:["café","cafe","té","te"], k:5 }, { kw:["fuze tea negro","fuzetea negro","fuze tea black"], k:5 }, { kw:["sidral mundet","refresco de manzana mundet","refresco mundet","mundet"], k:71 }, { kw:["refresco","coca"], k:150 },
   { kw:["cerveza"], k:150 }, { kw:["vino"], k:125 },
   { kw:["manzana"], k:75 }, { kw:["plátano","platano"], k:105 }, { kw:["naranja"], k:65 },
   { kw:["mango"], k:100 }, { kw:["fresas"], k:50 },
@@ -330,7 +330,7 @@ const FOODDB = [
   { kw:["camarón","camaron","camarones"], k:120 }, { kw:["salmón","salmon","atún","atun","pescado"], k:180 },
   { kw:["aguacate","guacamole"], k:120 }, { kw:["avena"], k:150 },
   { kw:["chocolate"], k:230 }, { kw:["papas fritas","papas"], k:300 },
-  { kw:["helado de chocolate","nieve de chocolate"], k:130 },
+  { kw:["mini rol de canela","mini role de canela","mini roles de canela","mini rollo de canela","rol de canela costco","mini cinnamon roll"], k:110 }, { kw:["helado de chocolate","nieve de chocolate"], k:130 },
   { kw:["helado de vainilla","nieve de vainilla"], k:120 },
   { kw:["helado de limón","helado de limon","nieve de limón","nieve de limon"], k:70 },
   { kw:["helado de queso con zarzamora","helado de queso","nieve de queso"], k:140 },
@@ -680,11 +680,12 @@ export default function App() {
       setSuppB12(false); setSuppMag(false); setSuppD3(false);
       setSuppOmega1(false); setSuppOmega2(false);
     }
-    if (bien) {
-      setWeight(bien.weight || "");
-      setDolorEspalda(bien.dolorEspalda || null);
-      setMomentoDolor(bien.momentoDolor || []);
-      setEstres(bien.estres || null);
+    const bienData = LS.get(`ht_bienestar:${d}`);
+    if (bienData) {
+      setWeight(bienData.weight || "");
+      setDolorEspalda(bienData.dolorEspalda || null);
+      setMomentoDolor(bienData.momentoDolor || []);
+      setEstres(bienData.estres || null);
     } else {
       setWeight(""); setDolorEspalda(null); setMomentoDolor([]); setEstres(null);
     }
