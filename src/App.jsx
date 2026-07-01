@@ -1980,7 +1980,7 @@ export default function App() {
               <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {[
                   ["Estrés","😣"],["Tristeza","😢"],["Ansiedad","😰"],["Enojo","😠"],
-                  ["Irritabilidad","😤"],["Somnolencia","😴"],["Energía","⚡"],
+                  ["Irritabilidad","😤"],["Somnolencia","😴"],["Cansancio","😮‍💨"],["Energía","⚡"],
                   ["Calma","🌿"],["Motivación","🌟"],
                 ].map(([emo, icon]) => {
                   const active = emociones.includes(emo);
