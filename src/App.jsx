@@ -532,6 +532,7 @@ export default function App() {
   // ── State ──
   const [section, setSection]           = useState(getCurrentSection());
   const [foodTab, setFoodTab]           = useState("hoy");
+  const [habitsTab, setHabitsTab]       = useState("hoy");
   const [token, setToken]               = useState(null);
   const [authLoading, setAuthLoading]   = useState(false);
   const [saving, setSaving]             = useState(false);
@@ -570,7 +571,7 @@ export default function App() {
   const [weight, setWeight]             = useState("");
   const [dolorEspalda, setDolorEspalda] = useState(null);  // null | "si" | "no"
   const [momentoDolor, setMomentoDolor] = useState([]);    // ["mañana","tarde","noche"]
-  const [estres, setEstres]             = useState(null);  // null | "si" | "no"
+  const [emociones, setEmociones]       = useState([]);    // ["Estrés","Energía",...]
 
   // Food (dynamic plan)
   const [activeDate, setActiveDate]     = useState(todayKey());
@@ -685,9 +686,9 @@ export default function App() {
       setWeight(bienData.weight || "");
       setDolorEspalda(bienData.dolorEspalda || null);
       setMomentoDolor(bienData.momentoDolor || []);
-      setEstres(bienData.estres || null);
+      setEmociones(bienData.emociones || []);
     } else {
-      setWeight(""); setDolorEspalda(null); setMomentoDolor([]); setEstres(null);
+      setWeight(""); setDolorEspalda(null); setMomentoDolor([]); setEmociones([]);
     }
   }
   function persistLog(nl) {
@@ -731,10 +732,10 @@ export default function App() {
   const firstBienRun = useRef(true);
   useEffect(() => {
     if (firstBienRun.current) { firstBienRun.current = false; return; }
-    if (weight || dolorEspalda || estres) {
-      LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
+    if (weight || dolorEspalda || emociones.length > 0) {
+      LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, emociones });
     }
-  }, [weight, dolorEspalda, momentoDolor, estres]);
+  }, [weight, dolorEspalda, momentoDolor, emociones]);
 
   const firstSuppRun = useRef(true);
   useEffect(() => {
@@ -859,12 +860,13 @@ export default function App() {
   };
 
   const saveBienestar = () => {
-    if (!weight && dolorEspalda === null && estres === null) {
+    if (!weight && dolorEspalda === null && emociones.length === 0) {
       alert("Ingresa al menos un dato"); return;
     }
     const momento = momentoDolor.length > 0 ? momentoDolor.join(", ") : "";
-    LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, estres });
-    doSave("Bienestar", [activeDate, weight||"", dolorEspalda||"", momento, estres||""], "peso");
+    const emocionesStr = emociones.join(", ");
+    LS.set(`ht_bienestar:${activeDate}`, { weight, dolorEspalda, momentoDolor, emociones });
+    doSave("Bienestar", [activeDate, weight||"", dolorEspalda||"", momento, emocionesStr], "peso");
   };
 
   const closeDay = async () => {
@@ -1574,6 +1576,14 @@ export default function App() {
         {section === "habits" && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
 
+            {/* Sub-tabs */}
+            <div style={{ display:"flex", background:"#fff", borderRadius:14, border:`1px solid ${NEUTRAL2}`, overflow:"hidden" }}>
+              {[["hoy","📋 Hoy"],["reporte","📊 Reporte"]].map(([id,l]) => (
+                <button key={id} onClick={() => setHabitsTab(id)} style={{ flex:1, padding:"11px 2px", border:"none", fontFamily:"inherit", background:habitsTab===id?VINO_LIGHT:"transparent", color:habitsTab===id?VINO:MUTED, fontWeight:habitsTab===id?700:400, fontSize:12.5, cursor:"pointer", borderBottom:habitsTab===id?`2px solid ${VINO}`:"2px solid transparent" }}>{l}</button>
+              ))}
+            </div>
+
+            {habitsTab === "hoy" && <>
             {/* HÁBITOS */}
             <div style={{ ...card, padding:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
@@ -1630,25 +1640,41 @@ export default function App() {
 
             {/* SUPLEMENTOS */}
             {(() => {
-              const SUPP_START = new Date("2026-06-28T12:00:00"); // 29 jun = día 1 (no D3)
               const today = new Date(activeDate + "T12:00:00");
-              const diffDays = Math.floor((today - SUPP_START) / 86400000);
-              const showSupp = diffDays >= 1; // desde el 29 jun
-              const d3Toca = diffDays % 2 === 0; // 29=día1=no(impar desde 0), 30=día2=sí...
-              // 29 jun: diffDays=1 → 1%2=1 → no toca ✓
-              // 30 jun: diffDays=2 → 2%2=0 → sí toca ✓
+
+              // Fechas de inicio por suplemento
+              const startMagOmega = new Date("2026-06-29T12:00:00"); // Mag + Omega desde 29 jun
+              const startD3       = new Date("2026-07-01T12:00:00"); // D3+K2 desde 1 jul
+              const startB12      = new Date("2026-07-01T12:00:00"); // B12 desde 1 jul
+
+              const showMagOmega = today >= startMagOmega;
+              const showD3       = today >= startD3;
+              const showB12      = today >= startB12;
+              const showSupp     = showMagOmega; // la sección aparece desde el 29 jun
+
+              // D3 alterna: 1 jul = sí (diff=0), 2 jul = no (diff=1), 3 jul = sí (diff=2)...
+              const diffD3   = Math.floor((today - startD3) / 86400000);
+              const d3Toca   = showD3 && diffD3 % 2 === 0;
+
               if (!showSupp) return (
                 <div style={{ ...card, padding:16, textAlign:"center", color:MUTED, fontSize:13 }}>
                   Los suplementos empiezan el 29 de junio 💊
                 </div>
               );
 
+              // Solo incluir suplementos que ya empezaron
               const suppList = [
-                { key:"b12",    val:suppB12,    set:setSuppB12,    icon:"💊", label:"B12 Bioganic sublingual", momento:"Mañana en ayunas", detail:"1 porción bajo la lengua 60 seg", alerta:null },
-                { key:"mag",    val:suppMag,    set:setSuppMag,    icon:"💊", label:"Magnesio citrato 400mg",  momento:"Mañana en ayunas", detail:"1 cápsula",                       alerta:null },
-                { key:"d3",     val:suppD3,     set:setSuppD3,     icon:"💊", label:"Seima D3+K2 gotas",       momento:"Mañana en ayunas", detail:"6 gotas · día sí día no",         alerta: d3Toca ? "✅ Hoy toca" : "⏭️ Hoy NO toca — descansa" },
-                { key:"omega1", val:suppOmega1, set:setSuppOmega1, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Comida — 2pm",      detail:"2 cápsulas",                      alerta:null },
-                { key:"omega2", val:suppOmega2, set:setSuppOmega2, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Noche con cena",    detail:"2 cápsulas",                      alerta:null },
+                ...(showB12    ? [{ key:"b12",    val:suppB12,    set:setSuppB12,    icon:"💊", label:"B12 Bioganic sublingual", momento:"Mañana en ayunas", detail:"1 gota bajo la lengua 60 seg", disabled:false,        alerta:null }] : []),
+                ...(showMagOmega ? [{ key:"mag",    val:suppMag,    set:setSuppMag,    icon:"💊", label:"Magnesio citrato 400mg",  momento:"Mañana en ayunas", detail:"1 cápsula",                       disabled:false,        alerta:null }] : []),
+                ...(showD3     ? [{ key:"d3",     val:suppD3,     set:setSuppD3,     icon:"💊", label:"Seima D3+K2 gotas",       momento:"Mañana en ayunas", detail:"6 gotas · día sí día no",         disabled:!d3Toca,      alerta: d3Toca ? "✅ Hoy toca" : "⏭️ Hoy NO toca — descansa" }] : []),
+                ...(showMagOmega ? [{ key:"omega1", val:suppOmega1, set:setSuppOmega1, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Comida — 2pm",      detail:"2 cápsulas",                      disabled:false,        alerta:null }] : []),
+                ...(showMagOmega ? [{ key:"omega2", val:suppOmega2, set:setSuppOmega2, icon:"🐟", label:"Omega 3 (Aceite Salmón)", momento:"Noche con cena",    detail:"2 cápsulas",                      disabled:false,        alerta:null }] : []),
+              ];
+
+              // Próximos suplementos que aún no empiezan
+              const upcoming = [
+                ...(!showB12    ? [{ label:"B12 Bioganic sublingual", fecha:"1 jul" }] : []),
+                ...(!showD3     ? [{ label:"Seima D3+K2 gotas",       fecha:"1 jul"  }] : []),
               ];
 
               return (
@@ -1662,12 +1688,12 @@ export default function App() {
                   </div>
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     {suppList.map(s => (
-                      <div key={s.key} onClick={() => { if(s.key==="d3" && !d3Toca) return; s.set(!s.val); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, background:s.val?"#F0FFF4":s.key==="d3"&&!d3Toca?"#F5F5F5":NEUTRAL, border:`1.5px solid ${s.val?"#52B788":s.key==="d3"&&!d3Toca?NEUTRAL2:NEUTRAL2}`, cursor:s.key==="d3"&&!d3Toca?"default":"pointer" }}>
+                      <div key={s.key} onClick={() => { if(s.disabled) return; s.set(!s.val); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", borderRadius:12, background:s.val?"#F0FFF4":s.disabled?"#F5F5F5":NEUTRAL, border:`1.5px solid ${s.val?"#52B788":NEUTRAL2}`, cursor:s.disabled?"default":"pointer" }}>
                         <div style={{ width:24, height:24, borderRadius:6, border:`2px solid ${s.val?"#52B788":NEUTRAL2}`, background:s.val?"#52B788":"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:14 }}>
                           {s.val ? "✓" : ""}
                         </div>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:13, fontWeight:600, color:s.key==="d3"&&!d3Toca?MUTED:TEXT }}>{s.icon} {s.label}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:s.disabled?MUTED:TEXT }}>{s.icon} {s.label}</div>
                           <div style={{ fontSize:11, color:MUTED, marginTop:1 }}>{s.momento} · {s.detail}</div>
                           {s.alerta && (
                             <div style={{ fontSize:11, fontWeight:700, color:d3Toca?"#2D6A4F":"#E67E22", marginTop:3 }}>{s.alerta}</div>
@@ -1675,6 +1701,14 @@ export default function App() {
                         </div>
                       </div>
                     ))}
+                    {upcoming.length > 0 && (
+                      <div style={{ marginTop:4, padding:"10px 14px", borderRadius:12, background:NEUTRAL, border:`1px dashed ${NEUTRAL2}` }}>
+                        <div style={{ fontSize:11, color:MUTED, fontWeight:600, marginBottom:4 }}>Próximamente:</div>
+                        {upcoming.map(u => (
+                          <div key={u.label} style={{ fontSize:12, color:MUTED }}>⏳ {u.label} — desde el {u.fecha}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -1683,6 +1717,202 @@ export default function App() {
             <button onClick={saveHabits} disabled={saving} style={{ width:"100%", padding:"14px", borderRadius:14, border:"none", cursor:"pointer", background:habitSaved?"#52B788":VINO, color:"#fff", fontSize:15, fontWeight:700, fontFamily:"inherit", opacity:saving?0.7:1 }}>
               {saving?"⏳ Guardando...":habitSaved?"✓ Guardado en Sheets":"💾 Guardar hábitos y suplementos"}
             </button>
+            </>}
+
+            {habitsTab === "reporte" && (() => {
+              // Recolectar todas las claves ht_supp:* de localStorage
+              const allKeys = Object.keys(localStorage).filter(k => k.startsWith("ht_supp:"));
+              if (allKeys.length === 0) return (
+                <div style={{ textAlign:"center", padding:40, color:MUTED, fontSize:14 }}>
+                  Aún no hay suplementos registrados. Marca tus tomas en la tab "Hoy" para ver el reporte aquí.
+                </div>
+              );
+
+              const startMagOmega = new Date("2026-06-29T12:00:00");
+              const startD3       = new Date("2026-07-01T12:00:00");
+              const startB12      = new Date("2026-07-01T12:00:00");
+
+              const records = allKeys.map(k => {
+                const date = k.replace("ht_supp:", "");
+                const data = LS.get(k) || {};
+                return { date, ...data };
+              }).sort((a,b) => a.date.localeCompare(b.date));
+
+              const SUPP_DEF = [
+                { key:"mag",    icon:"💊", label:"Magnesio citrato",       color:VINO,    start:startMagOmega, alwaysCounts:true },
+                { key:"omega1", icon:"🐟", label:"Omega 3 · Comida",       color:VINO2,   start:startMagOmega, alwaysCounts:true },
+                { key:"omega2", icon:"🐟", label:"Omega 3 · Noche",        color:VINO2,   start:startMagOmega, alwaysCounts:true },
+                { key:"d3",     icon:"💊", label:"D3+K2 (días que toca)",  color:"#8B5E3C", start:startD3,      alwaysCounts:false },
+                { key:"b12",    icon:"💊", label:"B12 sublingual",         color:"#2D6A4F", start:startB12,    alwaysCounts:true },
+              ];
+
+              function d3TocaEnFecha(dateStr) {
+                const d = new Date(dateStr + "T12:00:00");
+                const diff = Math.floor((d - startD3) / 86400000);
+                return diff >= 0 && diff % 2 === 0;
+              }
+
+              const stats = SUPP_DEF.map(s => {
+                const relevantRecords = records.filter(r => {
+                  const d = new Date(r.date + "T12:00:00");
+                  if (d < s.start) return false;
+                  if (s.key === "d3" && !d3TocaEnFecha(r.date)) return false;
+                  return true;
+                });
+                const taken = relevantRecords.filter(r => r[s.key]).length;
+                const total = relevantRecords.length;
+                // Racha actual: días consecutivos más recientes con el suplemento tomado
+                let racha = 0;
+                for (let i = relevantRecords.length - 1; i >= 0; i--) {
+                  if (relevantRecords[i][s.key]) racha++; else break;
+                }
+                return { ...s, taken, total, racha, pct: total > 0 ? Math.round((taken/total)*100) : 0 };
+              }).filter(s => s.total > 0);
+
+              const totalTaken = stats.reduce((s,x) => s+x.taken, 0);
+              const totalSlots = stats.reduce((s,x) => s+x.total, 0);
+              const overallPct = totalSlots > 0 ? Math.round((totalTaken/totalSlots)*100) : 0;
+              const bestRacha = stats.length ? Math.max(...stats.map(s=>s.racha)) : 0;
+
+              // Días recientes con algo faltante (últimos 10 registros)
+              const recentMissed = [...records].reverse().slice(0, 10).map(r => {
+                const faltó = SUPP_DEF.filter(s => {
+                  const d = new Date(r.date + "T12:00:00");
+                  if (d < s.start) return false;
+                  if (s.key === "d3" && !d3TocaEnFecha(r.date)) return false;
+                  return !r[s.key];
+                }).map(s => s.label.split(" (")[0]);
+                return { date:r.date, faltó };
+              }).filter(x => x.faltó.length > 0).slice(0, 5);
+
+              return <>
+                <div style={{ ...card, padding:16, background:VINO_LIGHT, border:`1px solid ${VINO2}44` }}>
+                  <div style={{ fontSize:13, fontWeight:800, color:VINO, marginBottom:10 }}>📊 {records.length} días registrados</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ background:"#fff", borderRadius:10, padding:"10px 12px", flex:1, textAlign:"center" }}>
+                      <div style={{ fontSize:22, fontWeight:800, color:VINO }}>{overallPct}%</div>
+                      <div style={{ fontSize:10, color:MUTED, fontWeight:600 }}>Adherencia general</div>
+                    </div>
+                    <div style={{ background:"#fff", borderRadius:10, padding:"10px 12px", flex:1, textAlign:"center" }}>
+                      <div style={{ fontSize:22, fontWeight:800, color:"#2D6A4F" }}>{bestRacha}</div>
+                      <div style={{ fontSize:10, color:MUTED, fontWeight:600 }}>Mejor racha actual</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ ...card, padding:16, marginTop:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:12 }}>Adherencia por suplemento</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                    {stats.map(s => (
+                      <div key={s.key}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:5 }}>
+                          <span style={{ fontSize:12.5, color:TEXT, fontWeight:600 }}>{s.icon} {s.label}</span>
+                          <span style={{ fontSize:12, fontWeight:800, color:s.color }}>{s.pct}%</span>
+                        </div>
+                        <div style={{ height:7, background:NEUTRAL, borderRadius:4, overflow:"hidden" }}>
+                          <div style={{ height:"100%", width:`${s.pct}%`, background:s.color, borderRadius:4, transition:"width .3s" }} />
+                        </div>
+                        <div style={{ fontSize:10.5, color:MUTED, marginTop:3 }}>
+                          {s.taken} de {s.total} días · racha actual: {s.racha} días
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {recentMissed.length > 0 && (
+                  <div style={{ ...card, padding:16, marginTop:10 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:10 }}>⚠️ Días que faltó algo</div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                      {recentMissed.map(x => (
+                        <div key={x.date} style={{ display:"flex", gap:10, padding:"8px 10px", background:NEUTRAL, borderRadius:8 }}>
+                          <span style={{ fontSize:11.5, fontWeight:700, color:VINO, minWidth:60, flexShrink:0 }}>{fmtShort(x.date)}</span>
+                          <span style={{ fontSize:11.5, color:MUTED }}>{x.faltó.join(", ")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* CRUCE: Emociones vs Suplementos */}
+                {(() => {
+                  const emoKeys = Object.keys(localStorage).filter(k => k.startsWith("ht_bienestar:"));
+                  if (emoKeys.length === 0) return null;
+
+                  const emoRecords = emoKeys.map(k => {
+                    const date = k.replace("ht_bienestar:", "");
+                    const data = LS.get(k) || {};
+                    return { date, emociones: data.emociones || [] };
+                  }).filter(r => r.emociones.length > 0);
+
+                  if (emoRecords.length === 0) return null;
+
+                  // Mapa fecha → suplementos tomados ese día
+                  const suppByDate = {};
+                  records.forEach(r => { suppByDate[r.date] = r; });
+
+                  const ALL_EMOTIONS = ["Estrés","Tristeza","Ansiedad","Enojo","Irritabilidad","Somnolencia","Energía","Calma","Motivación"];
+                  const SUPP_KEYS = ["mag","omega1","omega2","d3","b12"];
+                  const SUPP_LABELS = { mag:"Magnesio", omega1:"Omega 3 (comida)", omega2:"Omega 3 (noche)", d3:"D3+K2", b12:"B12" };
+
+                  // Para cada suplemento: % de días CON ese suplemento que tuvieron cada emoción, vs % SIN
+                  const crossData = SUPP_KEYS.map(suppKey => {
+                    const withSupp = emoRecords.filter(r => suppByDate[r.date]?.[suppKey]);
+                    const withoutSupp = emoRecords.filter(r => suppByDate[r.date] && !suppByDate[r.date][suppKey]);
+                    if (withSupp.length < 2 || withoutSupp.length < 2) return null; // necesita datos suficientes
+
+                    const pctWith = emo => Math.round((withSupp.filter(r => r.emociones.includes(emo)).length / withSupp.length) * 100);
+                    const pctWithout = emo => Math.round((withoutSupp.filter(r => r.emociones.includes(emo)).length / withoutSupp.length) * 100);
+
+                    const diffs = ALL_EMOTIONS.map(emo => ({ emo, with:pctWith(emo), without:pctWithout(emo), diff:pctWith(emo)-pctWithout(emo) }))
+                      .filter(d => Math.abs(d.diff) >= 15) // solo diferencias notables
+                      .sort((a,b) => Math.abs(b.diff)-Math.abs(a.diff))
+                      .slice(0,2);
+
+                    return { suppKey, label:SUPP_LABELS[suppKey], nWith:withSupp.length, nWithout:withoutSupp.length, diffs };
+                  }).filter(x => x && x.diffs.length > 0);
+
+                  if (crossData.length === 0) return (
+                    <div style={{ ...card, padding:16, marginTop:10 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:6 }}>🔬 Emociones vs Suplementos</div>
+                      <div style={{ fontSize:12, color:MUTED, lineHeight:1.5 }}>
+                        Aún no hay suficientes datos para ver patrones claros. Sigue registrando emociones y suplementos — necesitas al menos unos días con y sin cada suplemento para comparar.
+                      </div>
+                    </div>
+                  );
+
+                  return (
+                    <div style={{ ...card, padding:16, marginTop:10 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:TEXT, marginBottom:4 }}>🔬 Emociones vs Suplementos</div>
+                      <div style={{ fontSize:11, color:MUTED, marginBottom:12, lineHeight:1.4 }}>Comparando días con vs sin cada suplemento</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                        {crossData.map(c => (
+                          <div key={c.suppKey}>
+                            <div style={{ fontSize:12.5, fontWeight:700, color:VINO, marginBottom:6 }}>{c.label}</div>
+                            {c.diffs.map(d => (
+                              <div key={d.emo} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", fontSize:12 }}>
+                                <span style={{ color:TEXT }}>{d.emo}</span>
+                                <span style={{ fontWeight:700, color: d.diff < 0 ? "#2D6A4F" : "#C0392B" }}>
+                                  {d.with}% con · {d.without}% sin {d.diff < 0 ? "↓" : "↑"}
+                                </span>
+                              </div>
+                            ))}
+                            <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>{c.nWith} días con, {c.nWithout} días sin</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize:10.5, color:MUTED, marginTop:12, lineHeight:1.5, paddingTop:10, borderTop:`1px solid ${NEUTRAL}` }}>
+                        Esto es correlación, no causalidad — con pocos días de datos puede ser coincidencia. Útil como pista, no como diagnóstico.
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ fontSize:10.5, color:MUTED, textAlign:"center", padding:"8px 8px 0", lineHeight:1.5 }}>
+                  El % de D3+K2 solo cuenta los días que tocaba tomarlo (alternado).
+                </div>
+              </>;
+            })()}
           </div>
         )}
 
@@ -1735,20 +1965,34 @@ export default function App() {
               )}
             </div>
 
-            {/* ESTRÉS */}
+            {/* EMOCIONES */}
             <div style={{ ...card, padding:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
                 <span style={{ fontSize:24 }}>🧠</span>
                 <div>
-                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Estrés</div>
-                  <div style={{ fontSize:12, color:MUTED }}>¿Sentiste estrés hoy?</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:TEXT }}>Emociones</div>
+                  <div style={{ fontSize:12, color:MUTED }}>¿Cómo te sentiste hoy? Marca las que apliquen</div>
                 </div>
               </div>
-              <div style={{ display:"flex", gap:10 }}>
-                {[["si","Sí"],["no","No"]].map(([val,label]) => (
-                  <button key={val} onClick={() => setEstres(val)} style={{ flex:1, padding:"12px", borderRadius:12, border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:15, fontWeight:700, background:estres===val?(val==="si"?"#E67E22":VINO):(val==="si"?"#FEF0E6":NEUTRAL), color:estres===val?"#fff":(val==="si"?"#E67E22":MUTED) }}>{label}</button>
-                ))}
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {[
+                  ["Estrés","😣"],["Tristeza","😢"],["Ansiedad","😰"],["Enojo","😠"],
+                  ["Irritabilidad","😤"],["Somnolencia","😴"],["Energía","⚡"],
+                  ["Calma","🌿"],["Motivación","🌟"],
+                ].map(([emo, icon]) => {
+                  const active = emociones.includes(emo);
+                  return (
+                    <button key={emo} onClick={() => setEmociones(prev => active ? prev.filter(x=>x!==emo) : [...prev, emo])} style={{ padding:"9px 14px", borderRadius:100, border:`1.5px solid ${active?VINO:NEUTRAL2}`, cursor:"pointer", fontFamily:"inherit", fontSize:12.5, fontWeight:600, background:active?VINO:"#fff", color:active?"#fff":MUTED, display:"flex", alignItems:"center", gap:5 }}>
+                      <span>{icon}</span>{emo}
+                    </button>
+                  );
+                })}
               </div>
+              {emociones.length > 0 && (
+                <div style={{ marginTop:12, fontSize:11.5, color:VINO, fontWeight:600 }}>
+                  {emociones.length} {emociones.length===1?"emoción marcada":"emociones marcadas"}
+                </div>
+              )}
             </div>
 
             <SaveBtn onClick={saveBienestar} saving={saving} saved={savedSection==="peso"} label="🌿 Guardar bienestar del día" />
