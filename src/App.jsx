@@ -846,8 +846,11 @@ export default function App() {
       const customVals = customHabits.map(h => customValues[h.name]||0);
       LS.set(`ht_habits:${activeDate}`, { agua, lectura, customValues });
       LS.set(`ht_supp:${activeDate}`, { b12:suppB12, mag:suppMag, d3:suppD3, omega1:suppOmega1, omega2:suppOmega2 });
-      await upsertByDate("Habitos", [
-        activeDate, agua, lectura, ...customVals,
+      // Hábitos → solo agua, lectura y custom (sin suplementos)
+      await upsertByDate("Habitos", [activeDate, agua, lectura, ...customVals], token);
+      // Suplementos → pestaña separada
+      await upsertByDate("Suplementos", [
+        activeDate,
         suppB12?"✓":"", suppMag?"✓":"", suppD3?"✓":"",
         suppOmega1?"✓":"", suppOmega2?"✓":"",
       ], token);
